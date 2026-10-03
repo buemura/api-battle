@@ -1,0 +1,6 @@
+Dockerfile
+.dockerignore
+*.md
+_build/
+deps/
+erl_crash.dump
