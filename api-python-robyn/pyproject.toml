@@ -1,0 +1,25 @@
+[project]
+name = "apibattle-api"
+version = "0.1.0"
+description = "ApiBattle ledger API — Robyn + SQLAlchemy (asyncpg)"
+requires-python = ">=3.13"
+dependencies = [
+    "asyncpg>=0.30",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "robyn>=0.88.0",
+    "sqlalchemy[asyncio]>=2.0.36",
+]
+
+[dependency-groups]
+dev = ["ruff>=0.8"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]

@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>api-go-gin · k6 load test</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --r1: #86b6ef;
+  --r2: #2a78d6;
+  --r3: #104281;
+  --good: #0ca30c;
+  --good-ink: #006300;
+  --critical: #d03b3b;
+  --tip-bg: #0b0b0b;
+  --tip-ink: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --r1: #184f95;
+    --r2: #3987e5;
+    --r3: #9ec5f4;
+    --good-ink: #0ca30c;
+    --tip-bg: #ffffff;
+    --tip-ink: #0b0b0b;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --r1: #184f95;
+  --r2: #3987e5;
+  --r3: #9ec5f4;
+  --good-ink: #0ca30c;
+  --tip-bg: #ffffff;
+  --tip-ink: #0b0b0b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 1180px; margin: 0 auto; padding: 32px 16px 64px; }
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+h1 { font-size: 26px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 15px; margin: 0 0 2px; }
+.sub { color: var(--ink-2); margin: 4px 0 0; }
+.meta { color: var(--muted); font-size: 13px; text-align: right; }
+.verdict { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); }
+.verdict.pass { color: var(--good-ink); }
+.verdict.fail { color: var(--critical); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile, .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.tile { padding: 14px 16px; }
+.tile .label { color: var(--ink-2); font-size: 12px; }
+.tile .value { font-size: 26px; font-weight: 600; margin-top: 2px; }
+.tile .note { color: var(--muted); font-size: 12px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 16px; margin-bottom: 16px; }
+.card { padding: 16px 16px 12px; margin-bottom: 16px; min-width: 0; }
+.grid2 .card { margin-bottom: 0; }
+.card .desc { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart .gl { stroke: var(--grid); stroke-width: 1; }
+.chart .base { stroke: var(--axis); stroke-width: 1; }
+.chart .dl { fill: var(--ink-2); font-size: 11px; font-weight: 600; }
+.tip { position: absolute; pointer-events: none; background: var(--tip-bg); color: var(--tip-ink); font-size: 12px; padding: 6px 9px; border-radius: 6px; white-space: nowrap; opacity: 0; transition: opacity .08s; z-index: 2; }
+.tip b { font-weight: 600; }
+.tip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; }
+th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { color: var(--ink-2); font-weight: 600; font-size: 12px; }
+thead tr.group th { color: var(--muted); font-weight: 500; border-bottom: none; padding-bottom: 0; }
+tbody tr:hover td { background: color-mix(in srgb, var(--s1) 6%, transparent); }
+tr.total td { font-weight: 600; border-top: 2px solid var(--axis); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.ok { color: var(--good-ink); font-weight: 600; }
+.ko { color: var(--critical); font-weight: 600; }
+.rangebar { display: flex; height: 28px; border-radius: 6px; overflow: hidden; gap: 2px; margin: 8px 0 12px; }
+.rangebar div { min-width: 2px; }
+.ranges { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.ranges .k { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 12px; }
+.ranges .k::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.ranges .v { font-size: 18px; font-weight: 600; }
+.ranges .p { color: var(--muted); font-size: 12px; }
+details { margin-top: 8px; }
+summary { cursor: pointer; color: var(--ink-2); font-size: 12px; }
+details .scroll { max-height: 320px; overflow-y: auto; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1 id="title"></h1>
+      <p class="sub" id="subtitle"></p>
+    </div>
+    <div class="meta">
+      <div id="verdict"></div>
+      <div id="when" style="margin-top:6px"></div>
+    </div>
+  </header>
+
+  <section class="tiles" id="tiles"></section>
+
+  <section class="card">
+    <h2>Requests per second</h2>
+    <p class="desc">Completed requests each second, split by outcome.</p>
+    <div class="legend"><span style="--c:var(--s1)">OK</span><span style="--c:var(--critical)">KO (failed)</span></div>
+    <div class="chart" id="rps"></div>
+  </section>
+
+  <section class="card">
+    <h2>Active virtual users</h2>
+    <p class="desc">Ramp profile: 0 → 50 VUs over 15s, hold 30s, ramp down 15s.</p>
+    <div class="chart" id="vus"></div>
+  </section>
+
+  <section class="card">
+    <h2>Response time percentiles over time</h2>
+    <p class="desc">Per-second p50 / p95 / p99 of <code>http_req_duration</code> (ms).</p>
+    <div class="legend"><span style="--c:var(--s1)">p50</span><span style="--c:var(--s2)">p95</span><span style="--c:var(--s3)">p99</span></div>
+    <div class="chart" id="pct"></div>
+    <details><summary>Show per-second data</summary><div class="scroll"><table id="tl-table"></table></div></details>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Response time distribution</h2>
+      <p class="desc" id="hist-desc"></p>
+      <div class="chart" id="hist"></div>
+    </section>
+    <section class="card">
+      <h2>Response time ranges</h2>
+      <p class="desc" id="ranges-desc"></p>
+      <div class="rangebar" id="rangebar"></div>
+      <div class="ranges" id="ranges"></div>
+      <h2 style="margin-top:20px">Thresholds</h2>
+      <div class="scroll"><table id="thresholds"></table></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Statistics</h2>
+    <p class="desc">Per endpoint. Times in ms. KO = response outside the expected statuses.</p>
+    <div class="scroll"><table id="stats"></table></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Status codes</h2>
+      <div class="scroll"><table id="statuses"></table></div>
+    </section>
+    <section class="card">
+      <h2>Checks</h2>
+      <div class="scroll"><table id="checks"></table></div>
+    </section>
+  </div>
+</main>
+
+<script>
+const D = {"title":"api-go-gin \u00b7 k6 load test","startedAt":"2026-10-03T03:43:28+00:00","seconds":60.005574792,"global":{"total":179090,"ok":179090,"ko":0,"rps":2984.556028682129,"min":0.139375,"p50":6.8343545,"p75":17.32279175,"p95":41.19257705,"p99":69.63389499999991,"max":357.420042,"mean":12.490917901825897,"std":16.616886819610176},"routes":[{"name":"POST /accounts/{id}/transactions","total":44775,"ok":44775,"ko":0,"rps":746.1806699661753,"min":0.455417,"p50":18.894875,"p75":32.878021000000004,"p95":56.780883900000006,"p99":105.32898292000003,"max":357.420042,"mean":23.310659565136795,"std":22.693048170100273},{"name":"GET /accounts/{id}","total":44775,"ok":44775,"ko":0,"rps":746.1806699661753,"min":0.237166,"p50":5.403209,"p75":12.1935415,"p95":22.607645700000003,"p99":38.73483216000016,"max":231.676125,"mean":8.29040371586823,"std":9.628778668913373},{"name":"GET /accounts/{id}/transactions","total":44775,"ok":44775,"ko":0,"rps":746.1806699661753,"min":0.345709,"p50":6.526791,"p75":19.0098335,"p95":38.34657060000002,"p99":65.01159908000008,"max":268.179,"mean":12.557126594215521,"std":15.589080297463022},{"name":"GET /transactions/{id}","total":44765,"ok":44765,"ko":0,"rps":746.0140187836033,"min":0.139375,"p50":2.488833,"p75":8.923875,"p95":18.8983252,"p99":31.89061852000001,"max":223.089334,"mean":5.803988280464649,"std":8.620373889711326}],"timeline":[{"t":0,"ok":248,"ko":0,"vus":0,"p50":0.4174585,"p95":1.0279147,"p99":2.5131730200000013},{"t":1,"ok":3792,"ko":0,"vus":3,"p50":0.5323125,"p95":1.2702938999999995,"p99":2.01965397000001},{"t":2,"ok":6543,"ko":0,"vus":6,"p50":0.643125,"p95":2.198995799999999,"p99":3.35222064},{"t":3,"ok":5720,"ko":0,"vus":9,"p50":0.865583,"p95":5.312506250000002,"p99":7.743143690000001},{"t":4,"ok":6652,"ko":0,"vus":13,"p50":0.9004585,"p95":7.327283399999998,"p99":10.47375558},{"t":5,"ok":5241,"ko":0,"vus":16,"p50":1.116584,"p95":13.527459,"p99":20.42816720000002},{"t":6,"ok":3758,"ko":0,"vus":19,"p50":1.602771,"p95":20.570391100000002,"p99":43.410924309999935},{"t":7,"ok":4882,"ko":0,"vus":23,"p50":1.889917,"p95":20.30089825,"p99":28.33923101999958},{"t":8,"ok":5000,"ko":0,"vus":26,"p50":2.530917,"p95":19.632243400000004,"p99":31.954788930000003},{"t":9,"ok":5404,"ko":0,"vus":29,"p50":3.190333,"p95":18.81106705000001,"p99":25.325643010000018},{"t":10,"ok":4881,"ko":0,"vus":33,"p50":4.434458,"p95":20.3865,"p99":30.30976659999998},{"t":11,"ok":4612,"ko":0,"vus":36,"p50":5.416499999999999,"p95":23.625975299999993,"p99":33.484322740000174},{"t":12,"ok":4547,"ko":0,"vus":39,"p50":6.087291,"p95":24.186662699999996,"p99":31.98342654},{"t":13,"ok":4414,"ko":0,"vus":43,"p50":7.1108335,"p95":27.865592100000036,"p99":43.086700459999996},{"t":14,"ok":2842,"ko":0,"vus":46,"p50":11.4239995,"p95":45.74921249999999,"p99":94.53069619000034},{"t":15,"ok":2184,"ko":0,"vus":49,"p50":15.2986665,"p95":75.75170004999997,"p99":110.66021764000003},{"t":16,"ok":1997,"ko":0,"vus":50,"p50":18.280875,"p95":73.04040880000002,"p99":96.37617031999987},{"t":17,"ok":2445,"ko":0,"vus":50,"p50":15.543709,"p95":52.3132244,"p99":77.51009147999993},{"t":18,"ok":2713,"ko":0,"vus":50,"p50":14.766083,"p95":46.559808200000006,"p99":60.02769812000002},{"t":19,"ok":2373,"ko":0,"vus":50,"p50":16.405833,"p95":55.106174800000005,"p99":83.12565524000003},{"t":20,"ok":2776,"ko":0,"vus":50,"p50":13.8973545,"p95":49.959593749999996,"p99":80.2320625},{"t":21,"ok":3090,"ko":0,"vus":50,"p50":13.4373755,"p95":40.47236020000001,"p99":58.52080163000002},{"t":22,"ok":3289,"ko":0,"vus":50,"p50":11.794875,"p95":36.9124248,"p99":56.225233959999954},{"t":23,"ok":3720,"ko":0,"vus":50,"p50":11.232312,"p95":33.546637800000006,"p99":53.331380979999906},{"t":24,"ok":3664,"ko":0,"vus":50,"p50":11.0817715,"p95":35.15954735,"p99":43.38577832999999},{"t":25,"ok":2849,"ko":0,"vus":50,"p50":14.016333,"p95":43.636258399999996,"p99":56.921401839999994},{"t":26,"ok":1622,"ko":0,"vus":50,"p50":21.5653955,"p95":75.78156665000002,"p99":142.92700320999995},{"t":27,"ok":622,"ko":0,"vus":50,"p50":62.970396,"p95":258.51975275,"p99":343.5138479999999},{"t":28,"ok":1480,"ko":0,"vus":50,"p50":19.6540835,"p95":108.99984789999998,"p99":201.56387629000017},{"t":29,"ok":1480,"ko":0,"vus":50,"p50":23.7707295,"p95":137.80603925,"p99":213.4332556100001},{"t":30,"ok":2943,"ko":0,"vus":50,"p50":14.098791,"p95":40.9722788,"p99":53.444425579999994},{"t":31,"ok":3092,"ko":0,"vus":50,"p50":14.1591045,"p95":37.61153779999999,"p99":51.906439440000014},{"t":32,"ok":2403,"ko":0,"vus":50,"p50":14.252875,"p95":55.7895125,"p99":95.55923500000002},{"t":33,"ok":3167,"ko":0,"vus":50,"p50":13.549042,"p95":40.42739189999998,"p99":50.277788120000004},{"t":34,"ok":3198,"ko":0,"vus":50,"p50":13.0238335,"p95":37.28212505000002,"p99":46.84778499},{"t":35,"ok":2740,"ko":0,"vus":50,"p50":14.980812,"p95":47.303281250000005,"p99":64.22979026000002},{"t":36,"ok":2197,"ko":0,"vus":50,"p50":15.295125,"p95":72.01253279999995,"p99":103.52287532},{"t":37,"ok":2598,"ko":0,"vus":50,"p50":16.050604,"p95":50.8685562,"p99":69.89119324000004},{"t":38,"ok":2761,"ko":0,"vus":50,"p50":15.911709,"p95":43.570417,"p99":55.52876600000001},{"t":39,"ok":2720,"ko":0,"vus":50,"p50":15.547521,"p95":44.04912230000003,"p99":53.91820423},{"t":40,"ok":2525,"ko":0,"vus":50,"p50":15.307458,"p95":53.2405336,"p99":71.25924500000004},{"t":41,"ok":2623,"ko":0,"vus":50,"p50":13.995167,"p95":51.22970380000001,"p99":83.8593165200005},{"t":42,"ok":2598,"ko":0,"vus":50,"p50":16.697646,"p95":48.17956865,"p99":60.22497051000019},{"t":43,"ok":2907,"ko":0,"vus":50,"p50":14.223042,"p95":42.87906599999998,"p99":54.74716498000001},{"t":44,"ok":2499,"ko":0,"vus":50,"p50":16.530875,"p95":50.15667119999995,"p99":74.80478467999994},{"t":45,"ok":2844,"ko":0,"vus":50,"p50":15.314521,"p95":43.243983949999986,"p99":59.071589000000024},{"t":46,"ok":2713,"ko":0,"vus":47,"p50":14.725708,"p95":44.131750000000004,"p99":56.74379300000002},{"t":47,"ok":2054,"ko":0,"vus":44,"p50":15.8685835,"p95":57.704478849999965,"p99":94.18555625000005},{"t":48,"ok":2312,"ko":0,"vus":41,"p50":12.762124499999999,"p95":47.64547689999996,"p99":101.17736060999998},{"t":49,"ok":1959,"ko":0,"vus":37,"p50":11.604958,"p95":59.75941309999998,"p99":89.04879564000008},{"t":50,"ok":2403,"ko":0,"vus":34,"p50":9.992708,"p95":43.13443340000001,"p99":64.29439500000002},{"t":51,"ok":2503,"ko":0,"vus":31,"p50":8.364709,"p95":37.80393400000001,"p99":51.98807066000003},{"t":52,"ok":2256,"ko":0,"vus":27,"p50":7.5471875,"p95":41.264365,"p99":57.94919389999991},{"t":53,"ok":2014,"ko":0,"vus":24,"p50":6.3404585,"p95":39.33476479999999,"p99":72.14041028999948},{"t":54,"ok":2611,"ko":0,"vus":21,"p50":4.203125,"p95":32.512584000000004,"p99":40.811903900000004},{"t":55,"ok":2008,"ko":0,"vus":17,"p50":4.305562500000001,"p95":30.981608350000005,"p99":53.08583581000004},{"t":56,"ok":2528,"ko":0,"vus":14,"p50":3.3605415,"p95":22.0381557,"p99":29.89238259},{"t":57,"ok":1773,"ko":0,"vus":11,"p50":3.885291,"p95":16.772133200000013,"p99":31.628083479999987},{"t":58,"ok":1703,"ko":0,"vus":7,"p50":3.529708,"p95":11.2038791,"p99":17.13593684},{"t":59,"ok":1255,"ko":0,"vus":4,"p50":3.051916,"p95":7.409700099999999,"p99":12.347602320000004},{"t":60,"ok":343,"ko":0,"vus":1,"p50":2.741042,"p95":4.279833899999999,"p99":6.426311219999997}],"histogram":{"step":2,"bins":[45464,23251,15385,11930,9895,8555,8155,7222,6500,5598,4726,4031,3318,2914,2688,2373,2149,1924,1731,1500,1359,1105,936,825,689,603,517,405,370,303,247,195,183,144,133,119,98,82,85,101,70,67,64,47,49,57,50,878]},"ranges":{"fast":174223,"mid":4752,"slow":115,"ko":0,"low":50,"high":200},"statuses":[{"route":"GET /accounts/{id}","status":"200","count":44775},{"route":"GET /accounts/{id}/transactions","status":"200","count":44775},{"route":"GET /transactions/{id}","status":"200","count":44765},{"route":"POST /accounts/{id}/transactions","status":"201","count":44765},{"route":"POST /accounts/{id}/transactions","status":"422","count":10}],"checks":[{"name":"add transaction: 201 or 422","passes":44775,"fails":0},{"name":"get account: 200","passes":44775,"fails":0},{"name":"balance never negative","passes":44775,"fails":0},{"name":"list transactions: 200","passes":44775,"fails":0},{"name":"get transaction: 200","passes":44765,"fails":0}],"thresholds":[{"metric":"http_req_failed","expr":"rate<0.01","passed":true},{"metric":"http_req_duration","expr":"p(95)<200","passed":true}],"iterations":44775,"vusMax":50,"dataReceived":155007715,"dataSent":20114107};
+const $ = (id) => document.getElementById(id);
+const fmt = (n, d = 0) => Number(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const ms = (n) => n < 10 ? fmt(n, 2) : n < 100 ? fmt(n, 1) : fmt(n, 0);
+const bytes = (b) => { const u = ["B", "kB", "MB", "GB"]; let i = 0; while (b >= 1000 && i < 3) { b /= 1000; i++; } return fmt(b, b < 10 ? 1 : 0) + " " + u[i]; };
+const G = D.global;
+const allPassed = D.thresholds.every((t) => t.passed) && D.checks.every((c) => !c.fails);
+
+// ---- header & tiles -------------------------------------------------------
+$("title").textContent = D.title;
+$("subtitle").textContent = `${fmt(D.seconds)}s · up to ${D.vusMax} VUs · ${fmt(D.iterations)} iterations`;
+$("when").textContent = new Date(D.startedAt).toLocaleString();
+$("verdict").innerHTML = allPassed
+  ? `<span class="verdict pass">✓ All thresholds & checks passed</span>`
+  : `<span class="verdict fail">✕ Thresholds or checks failed</span>`;
+
+const koPct = G.total ? (G.ko / G.total) * 100 : 0;
+const tiles = [
+  ["Total requests", fmt(G.total), `${fmt(D.iterations)} iterations`],
+  ["Throughput", fmt(G.rps, 0) + " <small style=\"font-size:14px;font-weight:500\">req/s</small>", `peak ${fmt(Math.max(...D.timeline.map((t) => t.ok + t.ko)))} req/s`],
+  ["OK", `<span class="ok">${fmt(G.ok)}</span>`, `${fmt(100 - koPct, 2)}% success`],
+  ["KO", `<span class="${G.ko ? "ko" : ""}">${fmt(G.ko)}</span>`, `${fmt(koPct, 2)}% failed`],
+  ["Mean response", ms(G.mean) + " ms", `median ${ms(G.p50)} ms`],
+  ["p95 response", ms(G.p95) + " ms", `p99 ${ms(G.p99)} ms · max ${ms(G.max)} ms`],
+  ["Data", bytes(D.dataReceived), `received · ${bytes(D.dataSent)} sent`],
+];
+$("tiles").innerHTML = tiles.map(([l, v, n]) => `<div class="tile"><div class="label">${l}</div><div class="value">${v}</div><div class="note">${n}</div></div>`).join("");
+
+// ---- chart helpers -------------------------------------------------------
+const NS = "http://www.w3.org/2000/svg";
+function niceTicks(max, count = 4) {
+  if (max <= 0) return [0, 1];
+  const raw = max / count, exp = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * exp).find((s) => s >= raw);
+  const ticks = [];
+  for (let v = 0; v <= max + step * 0.001; v += step) ticks.push(+v.toFixed(6));
+  if (ticks[ticks.length - 1] < max) ticks.push(+(ticks[ticks.length - 1] + step).toFixed(6));
+  return ticks;
+}
+function makeSvg(el, H) {
+  const W = Math.max(el.clientWidth, 300);
+  el.innerHTML = "";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  el.appendChild(svg);
+  const tip = document.createElement("div");
+  tip.className = "tip";
+  el.appendChild(tip);
+  return { svg, tip, W, H };
+}
+function add(parent, tag, attrs, text) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (text != null) n.textContent = text;
+  parent.appendChild(n);
+  return n;
+}
+function showTip(tip, el, html, x, y) {
+  tip.innerHTML = html;
+  tip.style.opacity = 1;
+  const w = tip.offsetWidth, cw = el.clientWidth;
+  tip.style.left = Math.min(Math.max(x + 12, 0), cw - w) + "px";
+  tip.style.top = Math.max(y - tip.offsetHeight - 8, 0) + "px";
+}
+
+// Time-series chart: series = [{key, color, label, area?}], one y-axis.
+function timeChart(el, { H = 240, series, fmtY = (v) => fmt(v), labelLast = false }) {
+  const { svg, tip, W } = makeSvg(el, H);
+  const m = { l: 48, r: labelLast ? 44 : 12, t: 10, b: 26 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const T = D.timeline, n = T.length;
+  const yMax = Math.max(1, ...T.flatMap((d) => series.map((s) => s.stackOn ? d[s.key] + d[s.stackOn] : d[s.key])));
+  const ticks = niceTicks(yMax);
+  const top = ticks[ticks.length - 1];
+  const x = (i) => m.l + (n === 1 ? 0 : (i / (n - 1)) * pw);
+  const y = (v) => m.t + ph - (v / top) * ph;
+
+  ticks.forEach((t) => {
+    add(svg, "line", { class: t === 0 ? "base" : "gl", x1: m.l, x2: m.l + pw, y1: y(t), y2: y(t) });
+    add(svg, "text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end" }, fmtY(t));
+  });
+  const xStep = n > 40 ? 10 : 5;
+  T.forEach((d, i) => { if (d.t % xStep === 0) add(svg, "text", { x: x(i), y: H - 8, "text-anchor": "middle" }, d.t + "s"); });
+
+  series.forEach((s) => {
+    const val = (d) => (s.stackOn ? d[s.key] + d[s.stackOn] : d[s.key]);
+    const pts = T.map((d, i) => `${x(i).toFixed(1)},${y(val(d)).toFixed(1)}`);
+    if (s.area) {
+      const base = s.stackOn ? T.map((d, i) => `${x(i).toFixed(1)},${y(d[s.stackOn]).toFixed(1)}`).reverse() : [`${x(n - 1)},${y(0)}`, `${x(0)},${y(0)}`];
+      add(svg, "polygon", { points: pts.concat(base).join(" "), fill: s.color, "fill-opacity": 0.14 });
+    }
+    add(svg, "polyline", { points: pts.join(" "), fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" });
+    if (labelLast) {
+      // direct label at the series' peak region end
+      const last = T[n - 1];
+      add(svg, "text", { class: "dl", x: x(n - 1) + 6, y: y(val(last)) + 4 }, s.label);
+    }
+  });
+
+  // hover layer: crosshair + tooltip
+  const cross = add(svg, "line", { x1: 0, x2: 0, y1: m.t, y2: m.t + ph, stroke: "var(--axis)", "stroke-width": 1, opacity: 0 });
+  const dots = series.map((s) => add(svg, "circle", { r: 4, fill: s.color, stroke: "var(--surface)", "stroke-width": 2, opacity: 0 }));
+  const hit = add(svg, "rect", { x: m.l, y: m.t, width: pw, height: ph, fill: "transparent" });
+  const move = (ev) => {
+    const r = svg.getBoundingClientRect(), sx = ((ev.clientX - r.left) / r.width) * W;
+    const i = Math.max(0, Math.min(n - 1, Math.round(((sx - m.l) / pw) * (n - 1))));
+    const d = T[i];
+    cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("opacity", 1);
+    series.forEach((s, k) => { const v = s.stackOn ? d[s.key] + d[s.stackOn] : d[s.key]; dots[k].setAttribute("cx", x(i)); dots[k].setAttribute("cy", y(v)); dots[k].setAttribute("opacity", 1); });
+    const rows = series.map((s) => `<div><i style="background:${s.color}"></i>${s.label} <b>${fmtY(d[s.key])}</b></div>`).join("");
+    showTip(tip, el, `<div style="opacity:.7">t = ${d.t}s · ${d.vus} VUs</div>${rows}`, (x(i) / W) * el.clientWidth, (m.t / H) * el.clientHeight + 30);
+  };
+  hit.addEventListener("pointermove", move);
+  hit.addEventListener("pointerleave", () => { tip.style.opacity = 0; cross.setAttribute("opacity", 0); dots.forEach((d) => d.setAttribute("opacity", 0)); });
+}
+
+function histogram(el) {
+  const { step, bins } = D.histogram;
+  const { svg, tip, W, H } = makeSvg(el, 240);
+  const m = { l: 52, r: 8, t: 10, b: 26 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const ticks = niceTicks(Math.max(...bins));
+  const top = ticks[ticks.length - 1];
+  const bw = pw / bins.length;
+  const y = (v) => m.t + ph - (v / top) * ph;
+  ticks.forEach((t) => {
+    add(svg, "line", { class: t === 0 ? "base" : "gl", x1: m.l, x2: m.l + pw, y1: y(t), y2: y(t) });
+    add(svg, "text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end" }, fmt(t));
+  });
+  const labelEvery = Math.ceil(bins.length / 6);
+  bins.forEach((c, i) => {
+    const x0 = m.l + i * bw, h = Math.max(ph - (y(c) - m.t), c ? 1 : 0);
+    const last = i === bins.length - 1;
+    const bar = add(svg, "rect", { x: x0 + 1, y: m.t + ph - h, width: Math.max(bw - 2, 1), height: h, rx: Math.min(2, bw / 4), fill: "var(--s1)" });
+    if (i % labelEvery === 0) add(svg, "text", { x: x0, y: H - 8, "text-anchor": "middle" }, fmt(i * step, step < 1 ? 1 : 0));
+    const range = last ? `≥ ${fmt(i * step, 1)} ms` : `${fmt(i * step, 1)}–${fmt((i + 1) * step, 1)} ms`;
+    const hit = add(svg, "rect", { x: x0, y: m.t, width: bw, height: ph, fill: "transparent" });
+    hit.addEventListener("pointermove", () => { bar.setAttribute("fill-opacity", 0.75); showTip(tip, el, `${range}<br><b>${fmt(c)}</b> requests (${fmt((c / G.total) * 100, 2)}%)`, ((x0 + bw / 2) / W) * el.clientWidth, ((m.t + ph - h) / H) * el.clientHeight); });
+    hit.addEventListener("pointerleave", () => { bar.setAttribute("fill-opacity", 1); tip.style.opacity = 0; });
+  });
+  add(svg, "text", { x: m.l + pw, y: H - 8, "text-anchor": "end" }, "ms");
+  $("hist-desc").textContent = `Request count per ${step} ms bucket; the last bar collects the tail (≥ p99.5).`;
+}
+
+function render() {
+  timeChart($("rps"), { series: [
+    { key: "ok", label: "OK", color: "var(--s1)", area: true },
+    { key: "ko", label: "KO", color: "var(--critical)" },
+  ] });
+  timeChart($("vus"), { H: 150, series: [{ key: "vus", label: "VUs", color: "var(--s1)", area: true }] });
+  timeChart($("pct"), { fmtY: (v) => ms(v), series: [
+    { key: "p50", label: "p50", color: "var(--s1)" },
+    { key: "p95", label: "p95", color: "var(--s2)" },
+    { key: "p99", label: "p99", color: "var(--s3)" },
+  ] });
+  histogram($("hist"));
+}
+
+// ---- ranges, tables -------------------------------------------------------
+const R = D.ranges;
+const rangeItems = [
+  [`t < ${R.low} ms`, R.fast, "var(--r1)"],
+  [`${R.low} ≤ t < ${R.high} ms`, R.mid, "var(--r2)"],
+  [`t ≥ ${R.high} ms`, R.slow, "var(--r3)"],
+  ["Failed", R.ko, "var(--critical)"],
+];
+$("ranges-desc").textContent = `Share of requests per latency band (${R.high} ms is the p95 threshold).`;
+$("rangebar").innerHTML = rangeItems.filter(([, v]) => v).map(([l, v, c]) => `<div title="${l}: ${fmt(v)}" style="flex:${v};background:${c}"></div>`).join("");
+$("ranges").innerHTML = rangeItems.map(([l, v, c]) => `<div><div class="k" style="--c:${c}">${l}</div><div class="v">${fmt(v)}</div><div class="p">${fmt((v / G.total) * 100, 2)}%</div></div>`).join("");
+
+$("thresholds").innerHTML = `<thead><tr><th>Metric</th><th>Condition</th><th>Result</th></tr></thead><tbody>` +
+  D.thresholds.map((t) => `<tr><td><code>${t.metric}</code></td><td><code>${t.expr}</code></td><td class="${t.passed ? "ok" : "ko"}">${t.passed ? "✓ pass" : "✕ fail"}</td></tr>`).join("") + "</tbody>";
+
+const statRow = (name, s, cls = "") => `<tr class="${cls}"><td>${name}</td><td>${fmt(s.total)}</td><td>${fmt(s.ok)}</td><td class="${s.ko ? "ko" : ""}">${fmt(s.ko)}</td><td>${fmt((s.ko / s.total) * 100, 2)}%</td><td>${fmt(s.rps, 1)}</td>` +
+  ["min", "p50", "p75", "p95", "p99", "max", "mean", "std"].map((k) => `<td>${ms(s[k])}</td>`).join("") + "</tr>";
+$("stats").innerHTML = `<thead><tr class="group"><th></th><th colspan="5" style="text-align:center">Requests</th><th colspan="8" style="text-align:center">Response time (ms)</th></tr>` +
+  `<tr><th>Endpoint</th><th>Total</th><th>OK</th><th>KO</th><th>% KO</th><th>Req/s</th><th>Min</th><th>p50</th><th>p75</th><th>p95</th><th>p99</th><th>Max</th><th>Mean</th><th>Std dev</th></tr></thead><tbody>` +
+  D.routes.map((r) => statRow(`<code>${r.name}</code>`, r)).join("") + statRow("All requests", G, "total") + "</tbody>";
+
+$("statuses").innerHTML = `<thead><tr><th>Endpoint</th><th>Status</th><th>Count</th><th>Share</th></tr></thead><tbody>` +
+  D.statuses.map((s) => `<tr><td><code>${s.route}</code></td><td>${s.status}</td><td>${fmt(s.count)}</td><td>${fmt((s.count / G.total) * 100, 2)}%</td></tr>`).join("") + "</tbody>";
+
+$("checks").innerHTML = `<thead><tr><th>Check</th><th>Passed</th><th>Failed</th><th>Rate</th></tr></thead><tbody>` +
+  D.checks.map((c) => `<tr><td>${c.name}</td><td>${fmt(c.passes)}</td><td class="${c.fails ? "ko" : ""}">${fmt(c.fails)}</td><td class="${c.fails ? "ko" : "ok"}">${fmt((c.passes / (c.passes + c.fails)) * 100, 2)}%</td></tr>`).join("") + "</tbody>";
+
+$("tl-table").innerHTML = `<thead><tr><th>t</th><th>VUs</th><th>OK</th><th>KO</th><th>p50</th><th>p95</th><th>p99</th></tr></thead><tbody>` +
+  D.timeline.map((d) => `<tr><td>${d.t}s</td><td>${d.vus}</td><td>${fmt(d.ok)}</td><td>${fmt(d.ko)}</td><td>${ms(d.p50)}</td><td>${ms(d.p95)}</td><td>${ms(d.p99)}</td></tr>`).join("") + "</tbody>";
+
+render();
+let rt;
+addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 120); });
+</script>
+</body>
+</html>

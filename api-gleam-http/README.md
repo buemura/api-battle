@@ -1,0 +1,24 @@
+# apibattle_api
+
+[![Package Version](https://img.shields.io/hexpm/v/apibattle_api)](https://hex.pm/packages/apibattle_api)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/apibattle_api/)
+
+```sh
+gleam add apibattle_api@1
+```
+```gleam
+import apibattle_api
+
+pub fn main() -> Nil {
+  // TODO: An example of the project in use
+}
+```
+
+Further documentation can be found at <https://hexdocs.pm/apibattle_api>.
+
+## Development
+
+```sh
+gleam run   # Run the project
+gleam test  # Run the tests
+```

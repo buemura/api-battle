@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API Benchmark Reports</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --good: #0ca30c;
+  --good-ink: #006300;
+  --critical: #d03b3b;
+  --tip-bg: #0b0b0b;
+  --tip-ink: #ffffff;
+  --icon-invert: 0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --good-ink: #0ca30c;
+    --tip-bg: #ffffff;
+    --tip-ink: #0b0b0b;
+    --icon-invert: 1;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --good-ink: #0ca30c;
+  --tip-bg: #ffffff;
+  --tip-ink: #0b0b0b;
+  --icon-invert: 1;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 1180px; margin: 0 auto; padding: 32px 16px 64px; }
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+h1 { font-size: 26px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 15px; margin: 0 0 2px; }
+.sub { color: var(--ink-2); margin: 4px 0 0; }
+.meta { color: var(--muted); font-size: 13px; text-align: right; }
+.verdict { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); }
+.verdict.pass { color: var(--good-ink); }
+.verdict.fail { color: var(--critical); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile, .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.tile { padding: 14px 16px; }
+.tile .label { color: var(--ink-2); font-size: 12px; }
+.tile .value { font-size: 26px; font-weight: 600; margin-top: 2px; display: flex; align-items: center; gap: 8px; }
+.tile .value .ico { width: 24px; height: 24px; }
+.tile .note { color: var(--muted); font-size: 12px; }
+.card { padding: 16px 16px 12px; margin-bottom: 16px; min-width: 0; }
+.card .desc { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; }
+th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th.l, td.l { text-align: left; }
+thead th { color: var(--ink-2); font-weight: 600; font-size: 12px; }
+thead th[data-k] { cursor: pointer; user-select: none; }
+thead th[data-k]:hover { color: var(--ink); }
+thead th .arr { display: inline-block; width: 10px; color: var(--s1); }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: color-mix(in srgb, var(--s1) 6%, transparent); }
+.ok { color: var(--good-ink); font-weight: 600; }
+.ko { color: var(--critical); font-weight: 600; }
+.rank { color: var(--muted); font-weight: 600; width: 28px; }
+.rank.top { color: var(--ink); }
+.svc { display: flex; align-items: center; gap: 10px; }
+.svc a { color: var(--ink); font-weight: 600; text-decoration: none; }
+.svc a:hover { text-decoration: underline; }
+.svc .lang { color: var(--muted); font-size: 12px; font-weight: 400; display: block; }
+.ico { width: 28px; height: 28px; flex: none; display: inline-grid; place-items: center; }
+.ico img { width: 100%; height: 100%; object-fit: contain; }
+.ico img.mono { filter: invert(var(--icon-invert)); }
+.ico .badge { width: 100%; height: 100%; border-radius: 6px; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #fff; background: var(--b); }
+.barcell { width: 34%; min-width: 180px; }
+.bar { display: flex; align-items: center; gap: 8px; }
+.bar .track { flex: 1; height: 10px; border-radius: 4px; background: var(--grid); overflow: hidden; }
+.bar .fill { height: 100%; border-radius: 4px; background: var(--s1); }
+.bar .v { width: 64px; text-align: right; font-weight: 600; }
+.lat { width: 26%; min-width: 160px; }
+.lat svg { display: block; width: 100%; height: 14px; overflow: visible; }
+.lat .ln { stroke: var(--axis); stroke-width: 2; }
+.lat .d1 { fill: var(--s1); } .lat .d2 { fill: var(--s2); } .lat .d3 { fill: var(--s3); }
+.foot { color: var(--muted); font-size: 12px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>API benchmark reports</h1>
+      <p class="sub" id="subtitle"></p>
+    </div>
+    <div class="meta">
+      <div id="verdict"></div>
+      <div id="when" style="margin-top:6px"></div>
+    </div>
+  </header>
+
+  <section class="tiles" id="tiles"></section>
+
+  <section class="card">
+    <h2>Leaderboard</h2>
+    <p class="desc">Ranked by throughput (requests per second). Click a column to re-sort, or a row to open its full report. Times in ms.</p>
+    <div class="legend"><span style="--c:var(--s1)">p50</span><span style="--c:var(--s2)">p95</span><span style="--c:var(--s3)">p99</span></div>
+    <div class="scroll"><table id="board"></table></div>
+    <p class="foot">Each run: k6, 0 → 50 VUs over 15s, hold 30s, ramp down 15s (60s total).</p>
+  </section>
+</main>
+
+<script>
+const R = [{"file":"bash-socat-report.html","name":"bash-socat","startedAt":"2026-10-03T04:07:41+00:00","rps":450.6,"total":27041,"ko":0,"p50":73.87,"p95":184.47,"p99":250.84,"max":442.6,"mean":83.29,"vusMax":50},{"file":"bun-hono-report.html","name":"bun-hono","startedAt":"2026-10-03T03:28:04+00:00","rps":2174.3,"total":130456,"ko":0,"p50":10.46,"p95":54.83,"p99":87.86,"max":341.0,"mean":17.19,"vusMax":50},{"file":"cpp-drogon-report.html","name":"cpp-drogon","startedAt":"2026-10-03T03:33:47+00:00","rps":3245.9,"total":194776,"ko":0,"p50":6.4,"p95":36.97,"p99":53.4,"max":302.6,"mean":11.48,"vusMax":50},{"file":"cs-minimalapi-report.html","name":"cs-minimalapi","startedAt":"2026-10-03T04:16:39+00:00","rps":2523.6,"total":151432,"ko":0,"p50":10.1,"p95":44.36,"p99":61.85,"max":615.9,"mean":14.8,"vusMax":50},{"file":"gleam-http-report.html","name":"gleam-http","startedAt":"2026-10-03T03:39:14+00:00","rps":2602.6,"total":156165,"ko":0,"p50":9.09,"p95":44.39,"p99":64.75,"max":170.4,"mean":14.34,"vusMax":50},{"file":"go-gin-report.html","name":"go-gin","startedAt":"2026-10-03T03:43:28+00:00","rps":2984.6,"total":179090,"ko":0,"p50":6.83,"p95":41.19,"p99":69.63,"max":357.4,"mean":12.49,"vusMax":50},{"file":"node-fastify-report.html","name":"node-fastify","startedAt":"2026-10-03T03:46:43+00:00","rps":2443.1,"total":146602,"ko":0,"p50":10.44,"p95":44.27,"p99":66.51,"max":295.9,"mean":15.28,"vusMax":50},{"file":"postgrest-report.html","name":"postgrest","startedAt":"2026-10-03T04:02:22+00:00","rps":2138.1,"total":128292,"ko":0,"p50":4.37,"p95":74.91,"p99":135.61,"max":479.4,"mean":17.47,"vusMax":50},{"file":"python-fastapi-report.html","name":"python-fastapi","startedAt":"2026-10-03T03:49:33+00:00","rps":1189.5,"total":71378,"ko":0,"p50":17.57,"p95":101.16,"p99":160.87,"max":439.7,"mean":31.48,"vusMax":50},{"file":"python-robyn-report.html","name":"python-robyn","startedAt":"2026-10-03T04:05:12+00:00","rps":1640.7,"total":98449,"ko":0,"p50":20.3,"p95":49.74,"p99":73.48,"max":189.9,"mean":22.79,"vusMax":50},{"file":"rust-axum-report.html","name":"rust-axum","startedAt":"2026-10-03T03:52:06+00:00","rps":3325.6,"total":199552,"ko":0,"p50":7.24,"p95":34.93,"p99":55.25,"max":160.0,"mean":11.22,"vusMax":50}];
+
+// Language per service prefix: devicon path, display name, fallback badge colour, and whether the logo is monochrome (inverted in dark mode).
+const DEV = "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/";
+const LANGS = {
+  rust:     { lang: "Rust",       icon: "rust/rust-original.svg",             color: "#ce422b", mono: true },
+  cpp:      { lang: "C++",        icon: "cplusplus/cplusplus-original.svg",   color: "#00599c" },
+  go:       { lang: "Go",         icon: "go/go-original.svg",                 color: "#00add8" },
+  gleam:    { lang: "Gleam",      icon: "gleam/gleam-original.svg",           color: "#ffaff3" },
+  cs:       { lang: "C#",         icon: "csharp/csharp-original.svg",         color: "#68217a" },
+  node:     { lang: "JavaScript", icon: "nodejs/nodejs-original.svg",         color: "#5fa04e" },
+  bun:      { lang: "TypeScript", icon: "bun/bun-original.svg",               color: "#f9f1e1" },
+  postgrest:{ lang: "SQL",        icon: "postgresql/postgresql-original.svg", color: "#336791" },
+  python:   { lang: "Python",     icon: "python/python-original.svg",         color: "#3776ab" },
+  bash:     { lang: "Bash",       icon: "bash/bash-original.svg",             color: "#4eaa25" },
+};
+const langOf = r => LANGS[r.name.split("-")[0]] || { lang: "?", color: "#898781" };
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = (n, d = 0) => n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+function icon(r) {
+  const L = langOf(r);
+  const mono = (L.lang === "?" ? "?" : L.lang.replace(/[^A-Za-z#+]/g, "").slice(0, 2));
+  const badge = `<span class="badge" style="--b:${L.color}">${esc(mono)}</span>`;
+  if (!L.icon) return `<span class="ico" title="${esc(L.lang)}">${badge}</span>`;
+  return `<span class="ico" title="${esc(L.lang)}"><img src="${DEV}${L.icon}" alt="${esc(L.lang)}"${L.mono ? ' class="mono"' : ""} loading="lazy" onerror="this.outerHTML=this.dataset.fb" data-fb='${badge.replace(/'/g, "&#39;")}'></span>`;
+}
+
+// Header + tiles
+const byRps = [...R].sort((a, b) => b.rps - a.rps);
+const byP95 = [...R].sort((a, b) => a.p95 - b.p95);
+const byP50 = [...R].sort((a, b) => a.p50 - b.p50);
+const total = R.reduce((s, r) => s + r.total, 0);
+const ko = R.reduce((s, r) => s + r.ko, 0);
+const dates = R.map(r => new Date(r.startedAt)).sort((a, b) => a - b);
+
+document.getElementById("subtitle").textContent = `${R.length} implementations of the same API, load-tested with k6 at up to ${Math.max(...R.map(r => r.vusMax))} virtual users.`;
+document.getElementById("verdict").innerHTML = ko === 0
+  ? `<span class="verdict pass">✓ All runs error-free</span>`
+  : `<span class="verdict fail">✕ ${fmt(ko)} failed requests</span>`;
+document.getElementById("when").textContent = `${dates[0].toLocaleString()} – ${dates.at(-1).toLocaleTimeString()}`;
+
+const tile = (label, r, value, note) => `<div class="tile"><div class="label">${label}</div><div class="value">${r ? icon(r) : ""}${value}</div><div class="note">${note}</div></div>`;
+document.getElementById("tiles").innerHTML = [
+  tile("Highest throughput", byRps[0], esc(byRps[0].name), `${fmt(byRps[0].rps)} req/s`),
+  tile("Lowest p95 latency", byP95[0], esc(byP95[0].name), `${fmt(byP95[0].p95, 1)} ms p95`),
+  tile("Lowest p50 latency", byP50[0], esc(byP50[0].name), `${fmt(byP50[0].p50, 1)} ms p50`),
+  tile("Spread (fastest ÷ slowest)", null, `${(byRps[0].rps / byRps.at(-1).rps).toFixed(1)}×`, `${esc(byRps[0].name)} vs ${esc(byRps.at(-1).name)}`),
+  tile("Total requests", null, fmt(total), `${fmt(ko)} failed across all runs`),
+].join("");
+
+// Leaderboard
+const COLS = [
+  { k: "rank", label: "#", cls: "l", asc: true },
+  { k: "name", label: "Implementation", cls: "l", asc: true },
+  { k: "rps", label: "Requests / s", cls: "l barcell" },
+  { k: "p95", label: "Latency p50 · p95 · p99", cls: "l lat", asc: true },
+  { k: "p50", label: "p50", asc: true },
+  { k: "p95x", sortKey: "p95", label: "p95", asc: true },
+  { k: "p99", label: "p99", asc: true },
+  { k: "max", label: "max", asc: true },
+  { k: "total", label: "Requests" },
+  { k: "ko", label: "KO", asc: true },
+];
+const rankOf = new Map(byRps.map((r, i) => [r.name, i + 1]));
+const maxRps = byRps[0].rps;
+const maxP99 = Math.max(...R.map(r => r.p99));
+let sort = { k: "rps", dir: -1 };
+
+function latSvg(r) {
+  const x = v => (v / maxP99) * 96 + 2;
+  return `<svg viewBox="0 0 100 14" preserveAspectRatio="none" aria-label="p50 ${r.p50} ms, p95 ${r.p95} ms, p99 ${r.p99} ms">
+    <line class="ln" x1="${x(r.p50)}" x2="${x(r.p99)}" y1="7" y2="7" vector-effect="non-scaling-stroke"/>
+    <rect class="d1" x="${x(r.p50) - 1}" y="2" width="2" height="10"/><rect class="d2" x="${x(r.p95) - 1}" y="2" width="2" height="10"/><rect class="d3" x="${x(r.p99) - 1}" y="2" width="2" height="10"/></svg>`;
+}
+
+function render() {
+  const key = c => c.sortKey || c.k;
+  const rows = [...R].sort((a, b) => {
+    const k = sort.k === "rank" ? "rps" : sort.k;
+    const dir = sort.k === "rank" ? -sort.dir : sort.dir;
+    const va = a[k], vb = b[k];
+    return (typeof va === "string" ? va.localeCompare(vb) : va - vb) * dir;
+  });
+  const head = COLS.map(c => {
+    const isActive = sort.col === c.k;
+    return `<th class="${c.cls || ""}" data-k="${c.k}">${c.label}<span class="arr">${isActive ? (sort.dir < 0 ? "↓" : "↑") : ""}</span></th>`;
+  }).join("");
+  const body = rows.map(r => {
+    const L = langOf(r), rk = rankOf.get(r.name);
+    return `<tr data-href="${esc(r.file)}">
+      <td class="l rank${rk <= 3 ? " top" : ""}">${rk}</td>
+      <td class="l"><div class="svc">${icon(r)}<div><a href="${esc(r.file)}">${esc(r.name)}</a><span class="lang">${esc(L.lang)}</span></div></div></td>
+      <td class="l barcell"><div class="bar"><div class="track"><div class="fill" style="width:${(r.rps / maxRps * 100).toFixed(1)}%"></div></div><span class="v">${fmt(r.rps)}</span></div></td>
+      <td class="l lat">${latSvg(r)}</td>
+      <td>${fmt(r.p50, 1)}</td><td>${fmt(r.p95, 1)}</td><td>${fmt(r.p99, 1)}</td><td>${fmt(r.max, 0)}</td>
+      <td>${fmt(r.total)}</td><td class="${r.ko ? "ko" : "ok"}">${fmt(r.ko)}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("board").innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body}</tbody>`;
+}
+
+document.getElementById("board").addEventListener("click", e => {
+  const th = e.target.closest("th[data-k]");
+  if (th) {
+    const c = COLS.find(c => c.k === th.dataset.k);
+    const k = c.sortKey || c.k;
+    sort = sort.col === c.k ? { k, col: c.k, dir: -sort.dir } : { k, col: c.k, dir: c.asc ? 1 : -1 };
+    return render();
+  }
+  const tr = e.target.closest("tr[data-href]");
+  if (tr && !e.target.closest("a")) location.href = tr.dataset.href;
+});
+
+sort = { k: "rps", col: "rps", dir: -1 };
+render();
+</script>
+</body>
+</html>

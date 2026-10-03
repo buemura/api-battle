@@ -1,0 +1,91 @@
+@baseUrl = http://localhost:9999
+
+# Seeded accounts (see db/init.sql)
+@accountA = 1000
+@accountB = 2000
+
+### Health check
+GET {{baseUrl}}/health
+
+### List accounts (paginated, with current balances)
+GET {{baseUrl}}/accounts?page=1&page_size=20
+
+### Get account 1000 details (with current balance)
+GET {{baseUrl}}/accounts/{{accountA}}
+
+### Get account 2000 details (with current balance)
+GET {{baseUrl}}/accounts/{{accountB}}
+
+### Add credit transaction to account 1000
+# @name addCredit
+POST {{baseUrl}}/accounts/{{accountA}}/transactions
+Content-Type: application/json
+
+{
+  "type": "credit",
+  "amount": 10000,
+  "description": "Salary"
+}
+
+###
+@transactionId = {{addCredit.response.body.$.id}}
+
+### Add debit transaction to account 1000 (no description)
+POST {{baseUrl}}/accounts/{{accountA}}/transactions
+Content-Type: application/json
+
+{
+  "type": "debit",
+  "amount": 2500
+}
+
+### Add credit transaction to account 2000
+POST {{baseUrl}}/accounts/{{accountB}}/transactions
+Content-Type: application/json
+
+{
+  "type": "credit",
+  "amount": 5000,
+  "description": "Deposit"
+}
+
+### List account 1000 transactions (paginated, latest first)
+GET {{baseUrl}}/accounts/{{accountA}}/transactions?page=1&page_size=20
+
+### List account 2000 transactions (paginated, latest first)
+GET {{baseUrl}}/accounts/{{accountB}}/transactions?page=1&page_size=20
+
+### Get transaction details
+GET {{baseUrl}}/transactions/{{transactionId}}
+
+
+############################################################
+# Error cases
+############################################################
+
+### 422 - Debit with insufficient funds
+POST {{baseUrl}}/accounts/{{accountB}}/transactions
+Content-Type: application/json
+
+{
+  "type": "debit",
+  "amount": 999999999
+}
+
+### 400 - Invalid transaction type and amount
+POST {{baseUrl}}/accounts/{{accountA}}/transactions
+Content-Type: application/json
+
+{
+  "type": "refund",
+  "amount": -10
+}
+
+### 400 - Page size above the maximum (100)
+GET {{baseUrl}}/accounts/{{accountA}}/transactions?page=1&page_size=500
+
+### 404 - Account not found
+GET {{baseUrl}}/accounts/999999999
+
+### 404 - Transaction not found
+GET {{baseUrl}}/transactions/999999999
