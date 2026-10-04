@@ -1,0 +1,17 @@
+production: &default
+  adapter: postgresql
+  encoding: unicode
+  host: <%= ENV.fetch("DB_HOST", "localhost") %>
+  port: <%= ENV.fetch("DB_PORT", 5432) %>
+  database: <%= ENV.fetch("DB_NAME", "apibattle") %>
+  username: <%= ENV.fetch("DB_USER", "apibattle") %>
+  password: <%= ENV.fetch("DB_PASSWORD", "apibattle") %>
+  # Each Puma worker has its own pool, sized to its thread count.
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS", 2) %>
+  checkout_timeout: 5
+
+development:
+  <<: *default
+
+test:
+  <<: *default

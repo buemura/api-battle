@@ -1,0 +1,11 @@
+source "https://rubygems.org"
+
+ruby "~> 4.0"
+
+# Only the Rails frameworks an API-only JSON service needs.
+gem "railties", "~> 8.1"
+gem "actionpack", "~> 8.1"
+gem "activerecord", "~> 8.1"
+
+gem "pg", "~> 1.6"
+gem "puma", "~> 7.0"

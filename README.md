@@ -24,7 +24,7 @@ Simple API for banking API that allows managing accounts and transactions. It wo
 
 ```sh
 docker compose up -d --build   # Postgres + 2 API replicas behind Nginx on :9999
-# pick an implementation with API_IMPL (default: api-cpp-drogon)
+# pick an implementation with API_IMPL (default: api-ruby-sinatra)
 API_IMPL=api-rust-axum docker compose up -d --build
 docker run --rm -i --network apibattle_default -e BASE_URL=http://nginx \
   -v "$PWD/k6:/scripts" grafana/k6 run /scripts/load-test.js
@@ -60,3 +60,8 @@ Accounts `1000` and `2000` are seeded by [db/init.sql](db/init.sql). Amounts are
 - [api-postgrest](api-postgrest/) — [PostgREST](https://postgrest.org/) serving PL/pgSQL functions (validation and ledger rules live in the database), with nginx in the same container mapping the REST paths onto `/rpc/*`
 - [api-node-express](api-node-express/) — Node.js 22 / TypeScript, [Express 5](https://expressjs.com/) with [Drizzle ORM](https://orm.drizzle.team/) over [node-postgres](https://node-postgres.com/), [zod](https://zod.dev/) validation and [pino](https://getpino.io/) logging
 - [api-java-springboot](api-java-springboot/) — Java 25, [Spring Boot 4](https://spring.io/projects/spring-boot) Web MVC on Tomcat with virtual threads, [Spring Data JPA](https://spring.io/projects/spring-data-jpa) / Hibernate over a HikariCP pool
+- [api-bun-elysia](api-bun-elysia/) — Bun / TypeScript, [Elysia](https://elysiajs.com/) with its TypeBox schema validation and [Drizzle ORM](https://orm.drizzle.team/) over [postgres.js](https://github.com/porsager/postgres)
+- [api-java-quarkus](api-java-quarkus/) — Java 25, [Quarkus 3](https://quarkus.io/) with Quarkus REST (Vert.x) + Jackson, [Hibernate ORM with Panache](https://quarkus.io/guides/hibernate-orm-panache) over an Agroal JDBC pool
+- [api-php-laravel](api-php-laravel/) — PHP 8.5, [Laravel 13](https://laravel.com/) on [Octane](https://laravel.com/docs/octane) with the [FrankenPHP](https://frankenphp.dev/) worker-mode server, [Eloquent ORM](https://laravel.com/docs/eloquent) over PDO PostgreSQL
+- [api-ruby-rails](api-ruby-rails/) — Ruby 4.0, [Rails 8.1](https://rubyonrails.org/) API-only (Action Controller) on [Puma](https://puma.io/) in cluster mode with YJIT, [Active Record](https://guides.rubyonrails.org/active_record_basics.html) over the [pg](https://github.com/ged/ruby-pg) driver
+- [api-ruby-sinatra](api-ruby-sinatra/) — Ruby 4.0, [Sinatra 4](https://sinatrarb.com/) on [Puma](https://puma.io/) in cluster mode with YJIT, [Sequel](https://sequel.jeremyevans.net/) ORM over the [pg](https://github.com/ged/ruby-pg) driver

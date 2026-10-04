@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>api-php-laravel · k6 load test</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --r1: #86b6ef;
+  --r2: #2a78d6;
+  --r3: #104281;
+  --good: #0ca30c;
+  --good-ink: #006300;
+  --critical: #d03b3b;
+  --tip-bg: #0b0b0b;
+  --tip-ink: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --r1: #184f95;
+    --r2: #3987e5;
+    --r3: #9ec5f4;
+    --good-ink: #0ca30c;
+    --tip-bg: #ffffff;
+    --tip-ink: #0b0b0b;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --r1: #184f95;
+  --r2: #3987e5;
+  --r3: #9ec5f4;
+  --good-ink: #0ca30c;
+  --tip-bg: #ffffff;
+  --tip-ink: #0b0b0b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 1180px; margin: 0 auto; padding: 32px 16px 64px; }
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+h1 { font-size: 26px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 15px; margin: 0 0 2px; }
+.sub { color: var(--ink-2); margin: 4px 0 0; }
+.meta { color: var(--muted); font-size: 13px; text-align: right; }
+.verdict { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); }
+.verdict.pass { color: var(--good-ink); }
+.verdict.fail { color: var(--critical); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile, .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.tile { padding: 14px 16px; }
+.tile .label { color: var(--ink-2); font-size: 12px; }
+.tile .value { font-size: 26px; font-weight: 600; margin-top: 2px; }
+.tile .note { color: var(--muted); font-size: 12px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 16px; margin-bottom: 16px; }
+.card { padding: 16px 16px 12px; margin-bottom: 16px; min-width: 0; }
+.grid2 .card { margin-bottom: 0; }
+.card .desc { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart .gl { stroke: var(--grid); stroke-width: 1; }
+.chart .base { stroke: var(--axis); stroke-width: 1; }
+.chart .dl { fill: var(--ink-2); font-size: 11px; font-weight: 600; }
+.tip { position: absolute; pointer-events: none; background: var(--tip-bg); color: var(--tip-ink); font-size: 12px; padding: 6px 9px; border-radius: 6px; white-space: nowrap; opacity: 0; transition: opacity .08s; z-index: 2; }
+.tip b { font-weight: 600; }
+.tip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; }
+th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { color: var(--ink-2); font-weight: 600; font-size: 12px; }
+thead tr.group th { color: var(--muted); font-weight: 500; border-bottom: none; padding-bottom: 0; }
+tbody tr:hover td { background: color-mix(in srgb, var(--s1) 6%, transparent); }
+tr.total td { font-weight: 600; border-top: 2px solid var(--axis); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.ok { color: var(--good-ink); font-weight: 600; }
+.ko { color: var(--critical); font-weight: 600; }
+.rangebar { display: flex; height: 28px; border-radius: 6px; overflow: hidden; gap: 2px; margin: 8px 0 12px; }
+.rangebar div { min-width: 2px; }
+.ranges { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.ranges .k { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 12px; }
+.ranges .k::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.ranges .v { font-size: 18px; font-weight: 600; }
+.ranges .p { color: var(--muted); font-size: 12px; }
+details { margin-top: 8px; }
+summary { cursor: pointer; color: var(--ink-2); font-size: 12px; }
+details .scroll { max-height: 320px; overflow-y: auto; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1 id="title"></h1>
+      <p class="sub" id="subtitle"></p>
+    </div>
+    <div class="meta">
+      <div id="verdict"></div>
+      <div id="when" style="margin-top:6px"></div>
+    </div>
+  </header>
+
+  <section class="tiles" id="tiles"></section>
+
+  <section class="card">
+    <h2>Requests per second</h2>
+    <p class="desc">Completed requests each second, split by outcome.</p>
+    <div class="legend"><span style="--c:var(--s1)">OK</span><span style="--c:var(--critical)">KO (failed)</span></div>
+    <div class="chart" id="rps"></div>
+  </section>
+
+  <section class="card">
+    <h2>Active virtual users</h2>
+    <p class="desc">Ramp profile: 0 → 50 VUs over 15s, hold 30s, ramp down 15s.</p>
+    <div class="chart" id="vus"></div>
+  </section>
+
+  <section class="card">
+    <h2>Response time percentiles over time</h2>
+    <p class="desc">Per-second p50 / p95 / p99 of <code>http_req_duration</code> (ms).</p>
+    <div class="legend"><span style="--c:var(--s1)">p50</span><span style="--c:var(--s2)">p95</span><span style="--c:var(--s3)">p99</span></div>
+    <div class="chart" id="pct"></div>
+    <details><summary>Show per-second data</summary><div class="scroll"><table id="tl-table"></table></div></details>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Response time distribution</h2>
+      <p class="desc" id="hist-desc"></p>
+      <div class="chart" id="hist"></div>
+    </section>
+    <section class="card">
+      <h2>Response time ranges</h2>
+      <p class="desc" id="ranges-desc"></p>
+      <div class="rangebar" id="rangebar"></div>
+      <div class="ranges" id="ranges"></div>
+      <h2 style="margin-top:20px">Thresholds</h2>
+      <div class="scroll"><table id="thresholds"></table></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Statistics</h2>
+    <p class="desc">Per endpoint. Times in ms. KO = response outside the expected statuses.</p>
+    <div class="scroll"><table id="stats"></table></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Status codes</h2>
+      <div class="scroll"><table id="statuses"></table></div>
+    </section>
+    <section class="card">
+      <h2>Checks</h2>
+      <div class="scroll"><table id="checks"></table></div>
+    </section>
+  </div>
+</main>
+
+<script>
+const D = {"title":"api-php-laravel \u00b7 k6 load test","startedAt":"2026-10-04T15:57:54+00:00","seconds":60.010667916,"global":{"total":116386,"ok":116386,"ko":0,"rps":1939.4218401786734,"min":1.020208,"p50":14.690354,"p75":27.0482395,"p95":54.45472975,"p99":76.3454982499999,"max":195.639792,"mean":19.24706092111594,"std":17.0119607042078},"routes":[{"name":"POST /accounts/{id}/transactions","total":29100,"ok":29100,"ko":0,"rps":484.9137830082604,"min":1.968083,"p50":32.607458,"p75":49.52930225,"p95":73.43486664999999,"p99":93.55351273999997,"max":195.639792,"mean":34.61112867164948,"std":22.607584601027256},{"name":"GET /accounts/{id}","total":29100,"ok":29100,"ko":0,"rps":484.9137830082604,"min":1.343792,"p50":11.080958500000001,"p75":20.72701025,"p95":32.771911349999996,"p99":41.470018749999994,"max":90.897,"mean":13.808551006597938,"std":10.380609050079624},{"name":"GET /accounts/{id}/transactions","total":29100,"ok":29100,"ko":0,"rps":484.9137830082604,"min":1.809875,"p50":13.748854,"p75":23.31551075,"p95":35.584941,"p99":44.84999898999999,"max":112.826583,"mean":16.32800099041237,"std":10.596115410354068},{"name":"GET /transactions/{id}","total":29086,"ok":29086,"ko":0,"rps":484.68049115389215,"min":1.020208,"p50":9.4529165,"p75":18.8411775,"p95":31.074208499999997,"p99":38.84485000000003,"max":102.6465,"mean":12.237190569586742,"std":10.155417432234415}],"timeline":[{"t":0,"ok":142,"ko":0,"vus":0,"p50":2.1233120000000003,"p95":3.445466649999999,"p99":19.65299559000001},{"t":1,"ok":1316,"ko":0,"vus":3,"p50":2.459937,"p95":3.897167,"p99":4.897487549999995},{"t":2,"ok":2121,"ko":0,"vus":6,"p50":2.931333,"p95":5.445917,"p99":7.652725000000003},{"t":3,"ok":2472,"ko":0,"vus":9,"p50":3.546042,"p95":7.904101599999999,"p99":10.711593139999989},{"t":4,"ok":2393,"ko":0,"vus":13,"p50":4.416208,"p95":13.0428498,"p99":18.178983279999983},{"t":5,"ok":2419,"ko":0,"vus":16,"p50":4.603333,"p95":20.890570799999995,"p99":27.405271380000013},{"t":6,"ok":2122,"ko":0,"vus":19,"p50":5.576313,"p95":31.399491349999998,"p99":42.269376319999985},{"t":7,"ok":1664,"ko":0,"vus":23,"p50":8.051937500000001,"p95":48.07710179999998,"p99":79.81093978999994},{"t":8,"ok":1428,"ko":0,"vus":26,"p50":10.349896000000001,"p95":52.80578365000004,"p99":134.82113441000004},{"t":9,"ok":2114,"ko":0,"vus":29,"p50":10.134624500000001,"p95":41.0654579,"p99":54.93837745999995},{"t":10,"ok":2298,"ko":0,"vus":33,"p50":11.2753745,"p95":39.149922350000004,"p99":49.887603540000036},{"t":11,"ok":2390,"ko":0,"vus":36,"p50":12.1698335,"p95":38.54649650000001,"p99":48.36138325000005},{"t":12,"ok":2285,"ko":0,"vus":39,"p50":14.253458,"p95":45.96672480000001,"p99":56.44543872},{"t":13,"ok":2337,"ko":0,"vus":43,"p50":15.982042,"p95":45.44458379999999,"p99":61.89183987999995},{"t":14,"ok":2263,"ko":0,"vus":46,"p50":17.038333,"p95":56.11097910000001,"p99":70.50539288},{"t":15,"ok":2027,"ko":0,"vus":49,"p50":20.136292,"p95":58.9523169,"p99":78.477203},{"t":16,"ok":2122,"ko":0,"vus":50,"p50":22.330479,"p95":54.8427625,"p99":73.74776431999999},{"t":17,"ok":1731,"ko":0,"vus":50,"p50":25.440667,"p95":71.1336455,"p99":93.76099560000004},{"t":18,"ok":2000,"ko":0,"vus":50,"p50":21.2554375,"p95":58.9917822,"p99":74.06168},{"t":19,"ok":2125,"ko":0,"vus":50,"p50":21.022334,"p95":55.39455859999999,"p99":75.2578830800001},{"t":20,"ok":2114,"ko":0,"vus":50,"p50":21.873645500000002,"p95":52.851079399999996,"p99":68.14235058},{"t":21,"ok":2253,"ko":0,"vus":50,"p50":19.900416,"p95":54.51770000000002,"p99":67.54657652},{"t":22,"ok":2092,"ko":0,"vus":50,"p50":20.305875,"p95":57.67798925000001,"p99":71.53460350000013},{"t":23,"ok":2198,"ko":0,"vus":50,"p50":19.9068125,"p95":60.02889105,"p99":72.16888624000005},{"t":24,"ok":2048,"ko":0,"vus":50,"p50":23.939042,"p95":59.52855625000001,"p99":76.62714726},{"t":25,"ok":2124,"ko":0,"vus":50,"p50":24.002896,"p95":58.960812549999986,"p99":72.9895695},{"t":26,"ok":2067,"ko":0,"vus":50,"p50":21.126375,"p95":57.29338760000001,"p99":68.71981478},{"t":27,"ok":2017,"ko":0,"vus":50,"p50":22.610959,"p95":60.94060840000001,"p99":83.04168499999993},{"t":28,"ok":2066,"ko":0,"vus":50,"p50":19.918979,"p95":56.00771825,"p99":72.41683925000001},{"t":29,"ok":1996,"ko":0,"vus":50,"p50":22.7459165,"p95":65.87431225,"p99":85.77756905000001},{"t":30,"ok":1988,"ko":0,"vus":50,"p50":23.874312,"p95":67.4456523,"p99":82.61101425000012},{"t":31,"ok":1837,"ko":0,"vus":50,"p50":22.047666,"p95":68.152308,"p99":83.91799388000003},{"t":32,"ok":1651,"ko":0,"vus":50,"p50":25.171208,"p95":72.36108300000001,"p99":105.2306875},{"t":33,"ok":1750,"ko":0,"vus":50,"p50":21.498396,"p95":73.90199154999996,"p99":132.28647651},{"t":34,"ok":1964,"ko":0,"vus":50,"p50":20.3577705,"p95":62.19071254999999,"p99":84.44827499999992},{"t":35,"ok":2089,"ko":0,"vus":50,"p50":20.168625,"p95":57.577683399999984,"p99":72.69747699999992},{"t":36,"ok":1983,"ko":0,"vus":50,"p50":21.641417,"p95":64.4556369,"p99":84.80078506000002},{"t":37,"ok":1941,"ko":0,"vus":50,"p50":21.221791,"p95":68.815917,"p99":84.7755162},{"t":38,"ok":1985,"ko":0,"vus":50,"p50":21.12975,"p95":61.800400599999996,"p99":80.10667856000002},{"t":39,"ok":1935,"ko":0,"vus":50,"p50":23.154042,"p95":64.508816,"p99":91.7967007200003},{"t":40,"ok":2028,"ko":0,"vus":50,"p50":21.9362495,"p95":63.188839900000005,"p99":80.95591868000001},{"t":41,"ok":1929,"ko":0,"vus":50,"p50":26.563083,"p95":68.09184999999998,"p99":87.08503976},{"t":42,"ok":1994,"ko":0,"vus":50,"p50":24.53875,"p95":56.74082664999999,"p99":74.51815588},{"t":43,"ok":1897,"ko":0,"vus":50,"p50":22.449583,"p95":63.803166600000004,"p99":86.76102832},{"t":44,"ok":1998,"ko":0,"vus":50,"p50":21.496979500000002,"p95":65.5991393,"p99":78.89892173999999},{"t":45,"ok":1926,"ko":0,"vus":50,"p50":22.939563,"p95":62.010063,"p99":80.79590575},{"t":46,"ok":1935,"ko":0,"vus":47,"p50":20.627125,"p95":57.27127049999999,"p99":72.98038656000003},{"t":47,"ok":1761,"ko":0,"vus":44,"p50":19.898209,"p95":70.454917,"p99":104.2160668000001},{"t":48,"ok":1903,"ko":0,"vus":41,"p50":16.940083,"p95":59.32021640000001,"p99":73.02994532000001},{"t":49,"ok":1865,"ko":0,"vus":37,"p50":15.4115,"p95":56.9216754,"p99":77.00610835999987},{"t":50,"ok":1923,"ko":0,"vus":34,"p50":13.788875,"p95":47.944391300000014,"p99":60.06679973999998},{"t":51,"ok":1791,"ko":0,"vus":31,"p50":11.429916,"p95":51.4686665,"p99":76.11190869999781},{"t":52,"ok":1879,"ko":0,"vus":27,"p50":9.471292,"p95":45.63172089999999,"p99":57.94094024000003},{"t":53,"ok":1852,"ko":0,"vus":24,"p50":7.972771,"p95":41.13261425,"p99":57.51389183},{"t":54,"ok":1842,"ko":0,"vus":21,"p50":6.567458,"p95":39.121869050000015,"p99":52.50535215999998},{"t":55,"ok":1701,"ko":0,"vus":17,"p50":5.956917,"p95":37.579334,"p99":54.464459},{"t":56,"ok":1865,"ko":0,"vus":14,"p50":5.7445,"p95":17.92906719999999,"p99":27.64189875999998},{"t":57,"ok":1692,"ko":0,"vus":11,"p50":5.062563,"p95":12.77792065000001,"p99":19.878111249999822},{"t":58,"ok":1655,"ko":0,"vus":7,"p50":3.888083,"p95":7.073708699999998,"p99":8.77133104},{"t":59,"ok":957,"ko":0,"vus":4,"p50":3.316791,"p95":5.261483400000001,"p99":7.65074652000001},{"t":60,"ok":126,"ko":0,"vus":1,"p50":3.1743750000000004,"p95":4.9026875,"p99":5.9349685}],"histogram":{"step":2,"bins":[4493,12004,11590,8770,7290,6304,5898,5590,5467,4974,4539,4343,4007,3831,3588,3281,2715,2127,1754,1461,1170,1087,1011,868,812,754,706,602,587,559,520,446,468,420,357,300,282,215,188,154,120,107,92,535]},"ranges":{"fast":108974,"mid":7412,"slow":0,"ko":0,"low":50,"high":200},"statuses":[{"route":"GET /accounts/{id}","status":"200","count":29100},{"route":"GET /accounts/{id}/transactions","status":"200","count":29100},{"route":"GET /transactions/{id}","status":"200","count":29086},{"route":"POST /accounts/{id}/transactions","status":"201","count":29086},{"route":"POST /accounts/{id}/transactions","status":"422","count":14}],"checks":[{"name":"add transaction: 201 or 422","passes":29100,"fails":0},{"name":"get account: 200","passes":29100,"fails":0},{"name":"balance never negative","passes":29100,"fails":0},{"name":"list transactions: 200","passes":29100,"fails":0},{"name":"get transaction: 200","passes":29086,"fails":0}],"thresholds":[{"metric":"http_req_failed","expr":"rate<0.01","passed":true},{"metric":"http_req_duration","expr":"p(95)<200","passed":true}],"iterations":29100,"vusMax":50,"dataReceived":127043660,"dataSent":13068116};
+const $ = (id) => document.getElementById(id);
+const fmt = (n, d = 0) => Number(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const ms = (n) => n < 10 ? fmt(n, 2) : n < 100 ? fmt(n, 1) : fmt(n, 0);
+const bytes = (b) => { const u = ["B", "kB", "MB", "GB"]; let i = 0; while (b >= 1000 && i < 3) { b /= 1000; i++; } return fmt(b, b < 10 ? 1 : 0) + " " + u[i]; };
+const G = D.global;
+const allPassed = D.thresholds.every((t) => t.passed) && D.checks.every((c) => !c.fails);
+
+// ---- header & tiles -------------------------------------------------------
+$("title").textContent = D.title;
+$("subtitle").textContent = `${fmt(D.seconds)}s · up to ${D.vusMax} VUs · ${fmt(D.iterations)} iterations`;
+$("when").textContent = new Date(D.startedAt).toLocaleString();
+$("verdict").innerHTML = allPassed
+  ? `<span class="verdict pass">✓ All thresholds & checks passed</span>`
+  : `<span class="verdict fail">✕ Thresholds or checks failed</span>`;
+
+const koPct = G.total ? (G.ko / G.total) * 100 : 0;
+const tiles = [
+  ["Total requests", fmt(G.total), `${fmt(D.iterations)} iterations`],
+  ["Throughput", fmt(G.rps, 0) + " <small style=\"font-size:14px;font-weight:500\">req/s</small>", `peak ${fmt(Math.max(...D.timeline.map((t) => t.ok + t.ko)))} req/s`],
+  ["OK", `<span class="ok">${fmt(G.ok)}</span>`, `${fmt(100 - koPct, 2)}% success`],
+  ["KO", `<span class="${G.ko ? "ko" : ""}">${fmt(G.ko)}</span>`, `${fmt(koPct, 2)}% failed`],
+  ["Mean response", ms(G.mean) + " ms", `median ${ms(G.p50)} ms`],
+  ["p95 response", ms(G.p95) + " ms", `p99 ${ms(G.p99)} ms · max ${ms(G.max)} ms`],
+  ["Data", bytes(D.dataReceived), `received · ${bytes(D.dataSent)} sent`],
+];
+$("tiles").innerHTML = tiles.map(([l, v, n]) => `<div class="tile"><div class="label">${l}</div><div class="value">${v}</div><div class="note">${n}</div></div>`).join("");
+
+// ---- chart helpers -------------------------------------------------------
+const NS = "http://www.w3.org/2000/svg";
+function niceTicks(max, count = 4) {
+  if (max <= 0) return [0, 1];
+  const raw = max / count, exp = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * exp).find((s) => s >= raw);
+  const ticks = [];
+  for (let v = 0; v <= max + step * 0.001; v += step) ticks.push(+v.toFixed(6));
+  if (ticks[ticks.length - 1] < max) ticks.push(+(ticks[ticks.length - 1] + step).toFixed(6));
+  return ticks;
+}
+function makeSvg(el, H) {
+  const W = Math.max(el.clientWidth, 300);
+  el.innerHTML = "";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  el.appendChild(svg);
+  const tip = document.createElement("div");
+  tip.className = "tip";
+  el.appendChild(tip);
+  return { svg, tip, W, H };
+}
+function add(parent, tag, attrs, text) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (text != null) n.textContent = text;
+  parent.appendChild(n);
+  return n;
+}
+function showTip(tip, el, html, x, y) {
+  tip.innerHTML = html;
+  tip.style.opacity = 1;
+  const w = tip.offsetWidth, cw = el.clientWidth;
+  tip.style.left = Math.min(Math.max(x + 12, 0), cw - w) + "px";
+  tip.style.top = Math.max(y - tip.offsetHeight - 8, 0) + "px";
+}
+
+// Time-series chart: series = [{key, color, label, area?}], one y-axis.
+function timeChart(el, { H = 240, series, fmtY = (v) => fmt(v), labelLast = false }) {
+  const { svg, tip, W } = makeSvg(el, H);
+  const m = { l: 48, r: labelLast ? 44 : 12, t: 10, b: 26 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const T = D.timeline, n = T.length;
+  const yMax = Math.max(1, ...T.flatMap((d) => series.map((s) => s.stackOn ? d[s.key] + d[s.stackOn] : d[s.key])));
+  const ticks = niceTicks(yMax);
+  const top = ticks[ticks.length - 1];
+  const x = (i) => m.l + (n === 1 ? 0 : (i / (n - 1)) * pw);
+  const y = (v) => m.t + ph - (v / top) * ph;
+
+  ticks.forEach((t) => {
+    add(svg, "line", { class: t === 0 ? "base" : "gl", x1: m.l, x2: m.l + pw, y1: y(t), y2: y(t) });
+    add(svg, "text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end" }, fmtY(t));
+  });
+  const xStep = n > 40 ? 10 : 5;
+  T.forEach((d, i) => { if (d.t % xStep === 0) add(svg, "text", { x: x(i), y: H - 8, "text-anchor": "middle" }, d.t + "s"); });
+
+  series.forEach((s) => {
+    const val = (d) => (s.stackOn ? d[s.key] + d[s.stackOn] : d[s.key]);
+    const pts = T.map((d, i) => `${x(i).toFixed(1)},${y(val(d)).toFixed(1)}`);
+    if (s.area) {
+      const base = s.stackOn ? T.map((d, i) => `${x(i).toFixed(1)},${y(d[s.stackOn]).toFixed(1)}`).reverse() : [`${x(n - 1)},${y(0)}`, `${x(0)},${y(0)}`];
+      add(svg, "polygon", { points: pts.concat(base).join(" "), fill: s.color, "fill-opacity": 0.14 });
+    }
+    add(svg, "polyline", { points: pts.join(" "), fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" });
+    if (labelLast) {
+      // direct label at the series' peak region end
+      const last = T[n - 1];
+      add(svg, "text", { class: "dl", x: x(n - 1) + 6, y: y(val(last)) + 4 }, s.label);
+    }
+  });
+
+  // hover layer: crosshair + tooltip
+  const cross = add(svg, "line", { x1: 0, x2: 0, y1: m.t, y2: m.t + ph, stroke: "var(--axis)", "stroke-width": 1, opacity: 0 });
+  const dots = series.map((s) => add(svg, "circle", { r: 4, fill: s.color, stroke: "var(--surface)", "stroke-width": 2, opacity: 0 }));
+  const hit = add(svg, "rect", { x: m.l, y: m.t, width: pw, height: ph, fill: "transparent" });
+  const move = (ev) => {
+    const r = svg.getBoundingClientRect(), sx = ((ev.clientX - r.left) / r.width) * W;
+    const i = Math.max(0, Math.min(n - 1, Math.round(((sx - m.l) / pw) * (n - 1))));
+    const d = T[i];
+    cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("opacity", 1);
+    series.forEach((s, k) => { const v = s.stackOn ? d[s.key] + d[s.stackOn] : d[s.key]; dots[k].setAttribute("cx", x(i)); dots[k].setAttribute("cy", y(v)); dots[k].setAttribute("opacity", 1); });
+    const rows = series.map((s) => `<div><i style="background:${s.color}"></i>${s.label} <b>${fmtY(d[s.key])}</b></div>`).join("");
+    showTip(tip, el, `<div style="opacity:.7">t = ${d.t}s · ${d.vus} VUs</div>${rows}`, (x(i) / W) * el.clientWidth, (m.t / H) * el.clientHeight + 30);
+  };
+  hit.addEventListener("pointermove", move);
+  hit.addEventListener("pointerleave", () => { tip.style.opacity = 0; cross.setAttribute("opacity", 0); dots.forEach((d) => d.setAttribute("opacity", 0)); });
+}
+
+function histogram(el) {
+  const { step, bins } = D.histogram;
+  const { svg, tip, W, H } = makeSvg(el, 240);
+  const m = { l: 52, r: 8, t: 10, b: 26 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const ticks = niceTicks(Math.max(...bins));
+  const top = ticks[ticks.length - 1];
+  const bw = pw / bins.length;
+  const y = (v) => m.t + ph - (v / top) * ph;
+  ticks.forEach((t) => {
+    add(svg, "line", { class: t === 0 ? "base" : "gl", x1: m.l, x2: m.l + pw, y1: y(t), y2: y(t) });
+    add(svg, "text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end" }, fmt(t));
+  });
+  const labelEvery = Math.ceil(bins.length / 6);
+  bins.forEach((c, i) => {
+    const x0 = m.l + i * bw, h = Math.max(ph - (y(c) - m.t), c ? 1 : 0);
+    const last = i === bins.length - 1;
+    const bar = add(svg, "rect", { x: x0 + 1, y: m.t + ph - h, width: Math.max(bw - 2, 1), height: h, rx: Math.min(2, bw / 4), fill: "var(--s1)" });
+    if (i % labelEvery === 0) add(svg, "text", { x: x0, y: H - 8, "text-anchor": "middle" }, fmt(i * step, step < 1 ? 1 : 0));
+    const range = last ? `≥ ${fmt(i * step, 1)} ms` : `${fmt(i * step, 1)}–${fmt((i + 1) * step, 1)} ms`;
+    const hit = add(svg, "rect", { x: x0, y: m.t, width: bw, height: ph, fill: "transparent" });
+    hit.addEventListener("pointermove", () => { bar.setAttribute("fill-opacity", 0.75); showTip(tip, el, `${range}<br><b>${fmt(c)}</b> requests (${fmt((c / G.total) * 100, 2)}%)`, ((x0 + bw / 2) / W) * el.clientWidth, ((m.t + ph - h) / H) * el.clientHeight); });
+    hit.addEventListener("pointerleave", () => { bar.setAttribute("fill-opacity", 1); tip.style.opacity = 0; });
+  });
+  add(svg, "text", { x: m.l + pw, y: H - 8, "text-anchor": "end" }, "ms");
+  $("hist-desc").textContent = `Request count per ${step} ms bucket; the last bar collects the tail (≥ p99.5).`;
+}
+
+function render() {
+  timeChart($("rps"), { series: [
+    { key: "ok", label: "OK", color: "var(--s1)", area: true },
+    { key: "ko", label: "KO", color: "var(--critical)" },
+  ] });
+  timeChart($("vus"), { H: 150, series: [{ key: "vus", label: "VUs", color: "var(--s1)", area: true }] });
+  timeChart($("pct"), { fmtY: (v) => ms(v), series: [
+    { key: "p50", label: "p50", color: "var(--s1)" },
+    { key: "p95", label: "p95", color: "var(--s2)" },
+    { key: "p99", label: "p99", color: "var(--s3)" },
+  ] });
+  histogram($("hist"));
+}
+
+// ---- ranges, tables -------------------------------------------------------
+const R = D.ranges;
+const rangeItems = [
+  [`t < ${R.low} ms`, R.fast, "var(--r1)"],
+  [`${R.low} ≤ t < ${R.high} ms`, R.mid, "var(--r2)"],
+  [`t ≥ ${R.high} ms`, R.slow, "var(--r3)"],
+  ["Failed", R.ko, "var(--critical)"],
+];
+$("ranges-desc").textContent = `Share of requests per latency band (${R.high} ms is the p95 threshold).`;
+$("rangebar").innerHTML = rangeItems.filter(([, v]) => v).map(([l, v, c]) => `<div title="${l}: ${fmt(v)}" style="flex:${v};background:${c}"></div>`).join("");
+$("ranges").innerHTML = rangeItems.map(([l, v, c]) => `<div><div class="k" style="--c:${c}">${l}</div><div class="v">${fmt(v)}</div><div class="p">${fmt((v / G.total) * 100, 2)}%</div></div>`).join("");
+
+$("thresholds").innerHTML = `<thead><tr><th>Metric</th><th>Condition</th><th>Result</th></tr></thead><tbody>` +
+  D.thresholds.map((t) => `<tr><td><code>${t.metric}</code></td><td><code>${t.expr}</code></td><td class="${t.passed ? "ok" : "ko"}">${t.passed ? "✓ pass" : "✕ fail"}</td></tr>`).join("") + "</tbody>";
+
+const statRow = (name, s, cls = "") => `<tr class="${cls}"><td>${name}</td><td>${fmt(s.total)}</td><td>${fmt(s.ok)}</td><td class="${s.ko ? "ko" : ""}">${fmt(s.ko)}</td><td>${fmt((s.ko / s.total) * 100, 2)}%</td><td>${fmt(s.rps, 1)}</td>` +
+  ["min", "p50", "p75", "p95", "p99", "max", "mean", "std"].map((k) => `<td>${ms(s[k])}</td>`).join("") + "</tr>";
+$("stats").innerHTML = `<thead><tr class="group"><th></th><th colspan="5" style="text-align:center">Requests</th><th colspan="8" style="text-align:center">Response time (ms)</th></tr>` +
+  `<tr><th>Endpoint</th><th>Total</th><th>OK</th><th>KO</th><th>% KO</th><th>Req/s</th><th>Min</th><th>p50</th><th>p75</th><th>p95</th><th>p99</th><th>Max</th><th>Mean</th><th>Std dev</th></tr></thead><tbody>` +
+  D.routes.map((r) => statRow(`<code>${r.name}</code>`, r)).join("") + statRow("All requests", G, "total") + "</tbody>";
+
+$("statuses").innerHTML = `<thead><tr><th>Endpoint</th><th>Status</th><th>Count</th><th>Share</th></tr></thead><tbody>` +
+  D.statuses.map((s) => `<tr><td><code>${s.route}</code></td><td>${s.status}</td><td>${fmt(s.count)}</td><td>${fmt((s.count / G.total) * 100, 2)}%</td></tr>`).join("") + "</tbody>";
+
+$("checks").innerHTML = `<thead><tr><th>Check</th><th>Passed</th><th>Failed</th><th>Rate</th></tr></thead><tbody>` +
+  D.checks.map((c) => `<tr><td>${c.name}</td><td>${fmt(c.passes)}</td><td class="${c.fails ? "ko" : ""}">${fmt(c.fails)}</td><td class="${c.fails ? "ko" : "ok"}">${fmt((c.passes / (c.passes + c.fails)) * 100, 2)}%</td></tr>`).join("") + "</tbody>";
+
+$("tl-table").innerHTML = `<thead><tr><th>t</th><th>VUs</th><th>OK</th><th>KO</th><th>p50</th><th>p95</th><th>p99</th></tr></thead><tbody>` +
+  D.timeline.map((d) => `<tr><td>${d.t}s</td><td>${d.vus}</td><td>${fmt(d.ok)}</td><td>${fmt(d.ko)}</td><td>${ms(d.p50)}</td><td>${ms(d.p95)}</td><td>${ms(d.p99)}</td></tr>`).join("") + "</tbody>";
+
+render();
+let rt;
+addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 120); });
+</script>
+</body>
+</html>

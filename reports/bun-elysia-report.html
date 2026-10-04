@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>api-bun-elysia · k6 load test</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --r1: #86b6ef;
+  --r2: #2a78d6;
+  --r3: #104281;
+  --good: #0ca30c;
+  --good-ink: #006300;
+  --critical: #d03b3b;
+  --tip-bg: #0b0b0b;
+  --tip-ink: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --r1: #184f95;
+    --r2: #3987e5;
+    --r3: #9ec5f4;
+    --good-ink: #0ca30c;
+    --tip-bg: #ffffff;
+    --tip-ink: #0b0b0b;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --r1: #184f95;
+  --r2: #3987e5;
+  --r3: #9ec5f4;
+  --good-ink: #0ca30c;
+  --tip-bg: #ffffff;
+  --tip-ink: #0b0b0b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 1180px; margin: 0 auto; padding: 32px 16px 64px; }
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+h1 { font-size: 26px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 15px; margin: 0 0 2px; }
+.sub { color: var(--ink-2); margin: 4px 0 0; }
+.meta { color: var(--muted); font-size: 13px; text-align: right; }
+.verdict { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); }
+.verdict.pass { color: var(--good-ink); }
+.verdict.fail { color: var(--critical); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile, .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.tile { padding: 14px 16px; }
+.tile .label { color: var(--ink-2); font-size: 12px; }
+.tile .value { font-size: 26px; font-weight: 600; margin-top: 2px; }
+.tile .note { color: var(--muted); font-size: 12px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 16px; margin-bottom: 16px; }
+.card { padding: 16px 16px 12px; margin-bottom: 16px; min-width: 0; }
+.grid2 .card { margin-bottom: 0; }
+.card .desc { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart .gl { stroke: var(--grid); stroke-width: 1; }
+.chart .base { stroke: var(--axis); stroke-width: 1; }
+.chart .dl { fill: var(--ink-2); font-size: 11px; font-weight: 600; }
+.tip { position: absolute; pointer-events: none; background: var(--tip-bg); color: var(--tip-ink); font-size: 12px; padding: 6px 9px; border-radius: 6px; white-space: nowrap; opacity: 0; transition: opacity .08s; z-index: 2; }
+.tip b { font-weight: 600; }
+.tip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; }
+th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { color: var(--ink-2); font-weight: 600; font-size: 12px; }
+thead tr.group th { color: var(--muted); font-weight: 500; border-bottom: none; padding-bottom: 0; }
+tbody tr:hover td { background: color-mix(in srgb, var(--s1) 6%, transparent); }
+tr.total td { font-weight: 600; border-top: 2px solid var(--axis); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.ok { color: var(--good-ink); font-weight: 600; }
+.ko { color: var(--critical); font-weight: 600; }
+.rangebar { display: flex; height: 28px; border-radius: 6px; overflow: hidden; gap: 2px; margin: 8px 0 12px; }
+.rangebar div { min-width: 2px; }
+.ranges { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.ranges .k { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 12px; }
+.ranges .k::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.ranges .v { font-size: 18px; font-weight: 600; }
+.ranges .p { color: var(--muted); font-size: 12px; }
+details { margin-top: 8px; }
+summary { cursor: pointer; color: var(--ink-2); font-size: 12px; }
+details .scroll { max-height: 320px; overflow-y: auto; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1 id="title"></h1>
+      <p class="sub" id="subtitle"></p>
+    </div>
+    <div class="meta">
+      <div id="verdict"></div>
+      <div id="when" style="margin-top:6px"></div>
+    </div>
+  </header>
+
+  <section class="tiles" id="tiles"></section>
+
+  <section class="card">
+    <h2>Requests per second</h2>
+    <p class="desc">Completed requests each second, split by outcome.</p>
+    <div class="legend"><span style="--c:var(--s1)">OK</span><span style="--c:var(--critical)">KO (failed)</span></div>
+    <div class="chart" id="rps"></div>
+  </section>
+
+  <section class="card">
+    <h2>Active virtual users</h2>
+    <p class="desc">Ramp profile: 0 → 50 VUs over 15s, hold 30s, ramp down 15s.</p>
+    <div class="chart" id="vus"></div>
+  </section>
+
+  <section class="card">
+    <h2>Response time percentiles over time</h2>
+    <p class="desc">Per-second p50 / p95 / p99 of <code>http_req_duration</code> (ms).</p>
+    <div class="legend"><span style="--c:var(--s1)">p50</span><span style="--c:var(--s2)">p95</span><span style="--c:var(--s3)">p99</span></div>
+    <div class="chart" id="pct"></div>
+    <details><summary>Show per-second data</summary><div class="scroll"><table id="tl-table"></table></div></details>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Response time distribution</h2>
+      <p class="desc" id="hist-desc"></p>
+      <div class="chart" id="hist"></div>
+    </section>
+    <section class="card">
+      <h2>Response time ranges</h2>
+      <p class="desc" id="ranges-desc"></p>
+      <div class="rangebar" id="rangebar"></div>
+      <div class="ranges" id="ranges"></div>
+      <h2 style="margin-top:20px">Thresholds</h2>
+      <div class="scroll"><table id="thresholds"></table></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Statistics</h2>
+    <p class="desc">Per endpoint. Times in ms. KO = response outside the expected statuses.</p>
+    <div class="scroll"><table id="stats"></table></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Status codes</h2>
+      <div class="scroll"><table id="statuses"></table></div>
+    </section>
+    <section class="card">
+      <h2>Checks</h2>
+      <div class="scroll"><table id="checks"></table></div>
+    </section>
+  </div>
+</main>
+
+<script>
+const D = {"title":"api-bun-elysia \u00b7 k6 load test","startedAt":"2026-10-04T15:39:53+00:00","seconds":60.001506333,"global":{"total":161847,"ok":161847,"ko":0,"rps":2697.3822807342817,"min":0.332,"p50":9.356291,"p75":20.235667,"p95":41.5703875,"p99":57.98174982000002,"max":186.907333,"mean":13.849927367130684,"std":13.914100354847388},"routes":[{"name":"POST /accounts/{id}/transactions","total":40462,"ok":40462,"ko":0,"rps":674.3497367456333,"min":0.958666,"p50":23.662625,"p75":35.512333,"p95":54.052842,"p99":70.94343736999994,"max":186.907333,"mean":25.366808572586624,"std":16.784727797736547},{"name":"GET /accounts/{id}","total":40462,"ok":40462,"ko":0,"rps":674.3497367456333,"min":0.447459,"p50":6.4765625,"p75":13.36709375,"p95":22.376989249999994,"p99":29.676108879999994,"max":115.049125,"mean":8.73712551559488,"std":7.5405596641500905},{"name":"GET /accounts/{id}/transactions","total":40462,"ok":40462,"ko":0,"rps":674.3497367456333,"min":0.767708,"p50":9.562229,"p75":22.982656499999997,"p95":39.193749999999994,"p99":51.06473625999999,"max":146.153667,"mean":14.465842343655774,"std":13.35902976506396},{"name":"GET /transactions/{id}","total":40461,"ok":40461,"ko":0,"rps":674.333070497382,"min":0.332,"p50":4.206417,"p75":11.175667,"p95":19.8435,"p99":26.889949800000004,"max":108.047,"mean":6.829759536417785,"std":6.993868041491725}],"timeline":[{"t":0,"ok":1343,"ko":0,"vus":3,"p50":0.967041,"p95":3.3667548000000003,"p99":4.858144999999977},{"t":1,"ok":3289,"ko":0,"vus":6,"p50":1.104334,"p95":4.0308171999999995,"p99":5.955258079999997},{"t":2,"ok":3771,"ko":0,"vus":9,"p50":1.382125,"p95":6.7914794999999994,"p99":10.720704500000002},{"t":3,"ok":3981,"ko":0,"vus":13,"p50":1.492333,"p95":10.841375,"p99":14.378366599999998},{"t":4,"ok":4030,"ko":0,"vus":16,"p50":1.6445215,"p95":14.932104200000001,"p99":20.196955000000003},{"t":5,"ok":3850,"ko":0,"vus":19,"p50":1.8552710000000001,"p95":21.080335200000004,"p99":27.884294830000023},{"t":6,"ok":3900,"ko":0,"vus":23,"p50":2.3526045,"p95":23.27592020000002,"p99":30.781543500000023},{"t":7,"ok":3566,"ko":0,"vus":26,"p50":3.556521,"p95":26.064885500000003,"p99":34.2199816},{"t":8,"ok":3658,"ko":0,"vus":29,"p50":4.5768545,"p95":26.0352937,"p99":34.073054999999975},{"t":9,"ok":3385,"ko":0,"vus":33,"p50":5.928625,"p95":29.6747666,"p99":44.24132227999996},{"t":10,"ok":3462,"ko":0,"vus":36,"p50":6.9545414999999995,"p95":31.269382999999998,"p99":39.01481012999999},{"t":11,"ok":3426,"ko":0,"vus":39,"p50":8.5984375,"p95":31.2570205,"p99":39.627770999999996},{"t":12,"ok":3367,"ko":0,"vus":43,"p50":10.298084,"p95":33.2882002,"p99":42.11148656000001},{"t":13,"ok":3246,"ko":0,"vus":46,"p50":11.3983125,"p95":36.334052,"p99":46.31066525000001},{"t":14,"ok":3166,"ko":0,"vus":49,"p50":12.5395,"p95":38.168052,"p99":47.48661524999999},{"t":15,"ok":3101,"ko":0,"vus":50,"p50":13.217083,"p95":39.488084,"p99":48.76075},{"t":16,"ok":3086,"ko":0,"vus":50,"p50":13.8195835,"p95":38.06054125,"p99":48.476649950000066},{"t":17,"ok":2933,"ko":0,"vus":50,"p50":14.083666,"p95":41.1991082,"p99":51.20098456},{"t":18,"ok":3050,"ko":0,"vus":50,"p50":14.772625,"p95":40.39982920000004,"p99":49.58094916},{"t":19,"ok":2677,"ko":0,"vus":50,"p50":15.122958,"p95":45.328525,"p99":64.86148507999974},{"t":20,"ok":3171,"ko":0,"vus":50,"p50":13.550042,"p95":37.5999795,"p99":46.38110360000003},{"t":21,"ok":2913,"ko":0,"vus":50,"p50":14.481417,"p95":46.0339832,"p99":60.741477000000074},{"t":22,"ok":2960,"ko":0,"vus":50,"p50":14.086833,"p95":42.94081425000001,"p99":52.85297574999994},{"t":23,"ok":2871,"ko":0,"vus":50,"p50":14.191041,"p95":43.629521,"p99":67.07781690000002},{"t":24,"ok":3101,"ko":0,"vus":50,"p50":13.838291,"p95":36.728667,"p99":46.231792},{"t":25,"ok":2846,"ko":0,"vus":50,"p50":15.122500500000001,"p95":41.50172925,"p99":49.22964840000001},{"t":26,"ok":2844,"ko":0,"vus":50,"p50":14.9600625,"p95":42.77276875,"p99":56.635560000000076},{"t":27,"ok":2627,"ko":0,"vus":50,"p50":16.161583,"p95":47.796025199999995,"p99":61.370173159999986},{"t":28,"ok":2534,"ko":0,"vus":50,"p50":17.154,"p95":46.00605865,"p99":57.37744861000003},{"t":29,"ok":2835,"ko":0,"vus":50,"p50":14.730167,"p95":43.689641900000005,"p99":57.511884279999954},{"t":30,"ok":2853,"ko":0,"vus":50,"p50":14.644958,"p95":43.1812502,"p99":53.977746},{"t":31,"ok":2660,"ko":0,"vus":50,"p50":15.654167,"p95":44.431222600000034,"p99":68.99667927999997},{"t":32,"ok":2570,"ko":0,"vus":50,"p50":16.132604,"p95":48.99642935,"p99":62.113758019999985},{"t":33,"ok":1798,"ko":0,"vus":50,"p50":20.1214375,"p95":72.89072065000002,"p99":126.23451021999992},{"t":34,"ok":2109,"ko":0,"vus":50,"p50":17.682542,"p95":57.1018194,"p99":77.31905172000002},{"t":35,"ok":2364,"ko":0,"vus":50,"p50":17.8280205,"p95":55.52326429999999,"p99":77.22148282999997},{"t":36,"ok":2644,"ko":0,"vus":50,"p50":15.914854,"p95":48.2724517,"p99":62.36249500000007},{"t":37,"ok":2467,"ko":0,"vus":50,"p50":16.997208,"p95":50.055079499999984,"p99":64.26092416000003},{"t":38,"ok":2300,"ko":0,"vus":50,"p50":17.3821875,"p95":53.23051010000001,"p99":77.38902908000003},{"t":39,"ok":2398,"ko":0,"vus":50,"p50":16.335979000000002,"p95":53.554212400000026,"p99":67.55925773000007},{"t":40,"ok":1960,"ko":0,"vus":50,"p50":19.842042,"p95":64.7610646,"p99":127.62950750000002},{"t":41,"ok":2423,"ko":0,"vus":50,"p50":17.191542,"p95":50.782442,"p99":60.60866050000018},{"t":42,"ok":2333,"ko":0,"vus":50,"p50":18.415625,"p95":52.618957800000004,"p99":74.08268843999991},{"t":43,"ok":2447,"ko":0,"vus":50,"p50":16.592125,"p95":48.327099999999994,"p99":61.336427999999984},{"t":44,"ok":2468,"ko":0,"vus":50,"p50":17.0630415,"p95":48.12942455,"p99":60.16673678},{"t":45,"ok":2342,"ko":0,"vus":47,"p50":17.1159585,"p95":49.964153549999985,"p99":59.17596825},{"t":46,"ok":2457,"ko":0,"vus":44,"p50":15.738583,"p95":44.71882519999998,"p99":56.50308852000002},{"t":47,"ok":2168,"ko":0,"vus":41,"p50":14.102,"p95":53.13543125000001,"p99":88.66241988999981},{"t":48,"ok":2408,"ko":0,"vus":37,"p50":12.818354,"p95":46.25823290000002,"p99":57.250592059999974},{"t":49,"ok":2136,"ko":0,"vus":34,"p50":11.857104,"p95":43.92438475,"p99":64.6771107500001},{"t":50,"ok":2381,"ko":0,"vus":31,"p50":9.692958,"p95":36.719417,"p99":47.204291999999995},{"t":51,"ok":2175,"ko":0,"vus":27,"p50":7.918375,"p95":44.31632480000004,"p99":60.29600576000013},{"t":52,"ok":2245,"ko":0,"vus":24,"p50":6.891458,"p95":37.509850600000014,"p99":54.06095199999999},{"t":53,"ok":2259,"ko":0,"vus":21,"p50":5.252292,"p95":37.1835378,"p99":48.11748572000001},{"t":54,"ok":2347,"ko":0,"vus":17,"p50":4.372084,"p95":29.583691899999994,"p99":37.585566039999996},{"t":55,"ok":2067,"ko":0,"vus":14,"p50":4.143792,"p95":27.056967000000007,"p99":36.24575655999998},{"t":56,"ok":2134,"ko":0,"vus":11,"p50":3.8716665,"p95":16.3879455,"p99":24.184769780000003},{"t":57,"ok":1764,"ko":0,"vus":7,"p50":3.4877295000000004,"p95":12.776043799999993,"p99":19.876310749999966},{"t":58,"ok":1621,"ko":0,"vus":4,"p50":2.980875,"p95":6.085583,"p99":8.764133599999992},{"t":59,"ok":560,"ko":0,"vus":1,"p50":2.8804585,"p95":4.897548199999999,"p99":6.7201222199999995}],"histogram":{"step":2,"bins":[27030,22083,14521,10744,9435,8390,8005,7575,7109,5828,5158,4435,3761,3367,3053,3121,2730,2356,2022,1827,1485,1355,1118,949,852,659,488,425,352,276,217,212,128,781]},"ranges":{"fast":158309,"mid":3538,"slow":0,"ko":0,"low":50,"high":200},"statuses":[{"route":"GET /accounts/{id}","status":"200","count":40462},{"route":"GET /accounts/{id}/transactions","status":"200","count":40462},{"route":"GET /transactions/{id}","status":"200","count":40461},{"route":"POST /accounts/{id}/transactions","status":"201","count":40461},{"route":"POST /accounts/{id}/transactions","status":"422","count":1}],"checks":[{"name":"add transaction: 201 or 422","passes":40462,"fails":0},{"name":"get transaction: 200","passes":40461,"fails":0},{"name":"get account: 200","passes":40462,"fails":0},{"name":"balance never negative","passes":40462,"fails":0},{"name":"list transactions: 200","passes":40462,"fails":0}],"thresholds":[{"metric":"http_req_duration","expr":"p(95)<200","passed":true},{"metric":"http_req_failed","expr":"rate<0.01","passed":true}],"iterations":40462,"vusMax":50,"dataReceived":172838084,"dataSent":18175773};
+const $ = (id) => document.getElementById(id);
+const fmt = (n, d = 0) => Number(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const ms = (n) => n < 10 ? fmt(n, 2) : n < 100 ? fmt(n, 1) : fmt(n, 0);
+const bytes = (b) => { const u = ["B", "kB", "MB", "GB"]; let i = 0; while (b >= 1000 && i < 3) { b /= 1000; i++; } return fmt(b, b < 10 ? 1 : 0) + " " + u[i]; };
+const G = D.global;
+const allPassed = D.thresholds.every((t) => t.passed) && D.checks.every((c) => !c.fails);
+
+// ---- header & tiles -------------------------------------------------------
+$("title").textContent = D.title;
+$("subtitle").textContent = `${fmt(D.seconds)}s · up to ${D.vusMax} VUs · ${fmt(D.iterations)} iterations`;
+$("when").textContent = new Date(D.startedAt).toLocaleString();
+$("verdict").innerHTML = allPassed
+  ? `<span class="verdict pass">✓ All thresholds & checks passed</span>`
+  : `<span class="verdict fail">✕ Thresholds or checks failed</span>`;
+
+const koPct = G.total ? (G.ko / G.total) * 100 : 0;
+const tiles = [
+  ["Total requests", fmt(G.total), `${fmt(D.iterations)} iterations`],
+  ["Throughput", fmt(G.rps, 0) + " <small style=\"font-size:14px;font-weight:500\">req/s</small>", `peak ${fmt(Math.max(...D.timeline.map((t) => t.ok + t.ko)))} req/s`],
+  ["OK", `<span class="ok">${fmt(G.ok)}</span>`, `${fmt(100 - koPct, 2)}% success`],
+  ["KO", `<span class="${G.ko ? "ko" : ""}">${fmt(G.ko)}</span>`, `${fmt(koPct, 2)}% failed`],
+  ["Mean response", ms(G.mean) + " ms", `median ${ms(G.p50)} ms`],
+  ["p95 response", ms(G.p95) + " ms", `p99 ${ms(G.p99)} ms · max ${ms(G.max)} ms`],
+  ["Data", bytes(D.dataReceived), `received · ${bytes(D.dataSent)} sent`],
+];
+$("tiles").innerHTML = tiles.map(([l, v, n]) => `<div class="tile"><div class="label">${l}</div><div class="value">${v}</div><div class="note">${n}</div></div>`).join("");
+
+// ---- chart helpers -------------------------------------------------------
+const NS = "http://www.w3.org/2000/svg";
+function niceTicks(max, count = 4) {
+  if (max <= 0) return [0, 1];
+  const raw = max / count, exp = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * exp).find((s) => s >= raw);
+  const ticks = [];
+  for (let v = 0; v <= max + step * 0.001; v += step) ticks.push(+v.toFixed(6));
+  if (ticks[ticks.length - 1] < max) ticks.push(+(ticks[ticks.length - 1] + step).toFixed(6));
+  return ticks;
+}
+function makeSvg(el, H) {
+  const W = Math.max(el.clientWidth, 300);
+  el.innerHTML = "";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  el.appendChild(svg);
+  const tip = document.createElement("div");
+  tip.className = "tip";
+  el.appendChild(tip);
+  return { svg, tip, W, H };
+}
+function add(parent, tag, attrs, text) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (text != null) n.textContent = text;
+  parent.appendChild(n);
+  return n;
+}
+function showTip(tip, el, html, x, y) {
+  tip.innerHTML = html;
+  tip.style.opacity = 1;
+  const w = tip.offsetWidth, cw = el.clientWidth;
+  tip.style.left = Math.min(Math.max(x + 12, 0), cw - w) + "px";
+  tip.style.top = Math.max(y - tip.offsetHeight - 8, 0) + "px";
+}
+
+// Time-series chart: series = [{key, color, label, area?}], one y-axis.
+function timeChart(el, { H = 240, series, fmtY = (v) => fmt(v), labelLast = false }) {
+  const { svg, tip, W } = makeSvg(el, H);
+  const m = { l: 48, r: labelLast ? 44 : 12, t: 10, b: 26 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const T = D.timeline, n = T.length;
+  const yMax = Math.max(1, ...T.flatMap((d) => series.map((s) => s.stackOn ? d[s.key] + d[s.stackOn] : d[s.key])));
+  const ticks = niceTicks(yMax);
+  const top = ticks[ticks.length - 1];
+  const x = (i) => m.l + (n === 1 ? 0 : (i / (n - 1)) * pw);
+  const y = (v) => m.t + ph - (v / top) * ph;
+
+  ticks.forEach((t) => {
+    add(svg, "line", { class: t === 0 ? "base" : "gl", x1: m.l, x2: m.l + pw, y1: y(t), y2: y(t) });
+    add(svg, "text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end" }, fmtY(t));
+  });
+  const xStep = n > 40 ? 10 : 5;
+  T.forEach((d, i) => { if (d.t % xStep === 0) add(svg, "text", { x: x(i), y: H - 8, "text-anchor": "middle" }, d.t + "s"); });
+
+  series.forEach((s) => {
+    const val = (d) => (s.stackOn ? d[s.key] + d[s.stackOn] : d[s.key]);
+    const pts = T.map((d, i) => `${x(i).toFixed(1)},${y(val(d)).toFixed(1)}`);
+    if (s.area) {
+      const base = s.stackOn ? T.map((d, i) => `${x(i).toFixed(1)},${y(d[s.stackOn]).toFixed(1)}`).reverse() : [`${x(n - 1)},${y(0)}`, `${x(0)},${y(0)}`];
+      add(svg, "polygon", { points: pts.concat(base).join(" "), fill: s.color, "fill-opacity": 0.14 });
+    }
+    add(svg, "polyline", { points: pts.join(" "), fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" });
+    if (labelLast) {
+      // direct label at the series' peak region end
+      const last = T[n - 1];
+      add(svg, "text", { class: "dl", x: x(n - 1) + 6, y: y(val(last)) + 4 }, s.label);
+    }
+  });
+
+  // hover layer: crosshair + tooltip
+  const cross = add(svg, "line", { x1: 0, x2: 0, y1: m.t, y2: m.t + ph, stroke: "var(--axis)", "stroke-width": 1, opacity: 0 });
+  const dots = series.map((s) => add(svg, "circle", { r: 4, fill: s.color, stroke: "var(--surface)", "stroke-width": 2, opacity: 0 }));
+  const hit = add(svg, "rect", { x: m.l, y: m.t, width: pw, height: ph, fill: "transparent" });
+  const move = (ev) => {
+    const r = svg.getBoundingClientRect(), sx = ((ev.clientX - r.left) / r.width) * W;
+    const i = Math.max(0, Math.min(n - 1, Math.round(((sx - m.l) / pw) * (n - 1))));
+    const d = T[i];
+    cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("opacity", 1);
+    series.forEach((s, k) => { const v = s.stackOn ? d[s.key] + d[s.stackOn] : d[s.key]; dots[k].setAttribute("cx", x(i)); dots[k].setAttribute("cy", y(v)); dots[k].setAttribute("opacity", 1); });
+    const rows = series.map((s) => `<div><i style="background:${s.color}"></i>${s.label} <b>${fmtY(d[s.key])}</b></div>`).join("");
+    showTip(tip, el, `<div style="opacity:.7">t = ${d.t}s · ${d.vus} VUs</div>${rows}`, (x(i) / W) * el.clientWidth, (m.t / H) * el.clientHeight + 30);
+  };
+  hit.addEventListener("pointermove", move);
+  hit.addEventListener("pointerleave", () => { tip.style.opacity = 0; cross.setAttribute("opacity", 0); dots.forEach((d) => d.setAttribute("opacity", 0)); });
+}
+
+function histogram(el) {
+  const { step, bins } = D.histogram;
+  const { svg, tip, W, H } = makeSvg(el, 240);
+  const m = { l: 52, r: 8, t: 10, b: 26 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const ticks = niceTicks(Math.max(...bins));
+  const top = ticks[ticks.length - 1];
+  const bw = pw / bins.length;
+  const y = (v) => m.t + ph - (v / top) * ph;
+  ticks.forEach((t) => {
+    add(svg, "line", { class: t === 0 ? "base" : "gl", x1: m.l, x2: m.l + pw, y1: y(t), y2: y(t) });
+    add(svg, "text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end" }, fmt(t));
+  });
+  const labelEvery = Math.ceil(bins.length / 6);
+  bins.forEach((c, i) => {
+    const x0 = m.l + i * bw, h = Math.max(ph - (y(c) - m.t), c ? 1 : 0);
+    const last = i === bins.length - 1;
+    const bar = add(svg, "rect", { x: x0 + 1, y: m.t + ph - h, width: Math.max(bw - 2, 1), height: h, rx: Math.min(2, bw / 4), fill: "var(--s1)" });
+    if (i % labelEvery === 0) add(svg, "text", { x: x0, y: H - 8, "text-anchor": "middle" }, fmt(i * step, step < 1 ? 1 : 0));
+    const range = last ? `≥ ${fmt(i * step, 1)} ms` : `${fmt(i * step, 1)}–${fmt((i + 1) * step, 1)} ms`;
+    const hit = add(svg, "rect", { x: x0, y: m.t, width: bw, height: ph, fill: "transparent" });
+    hit.addEventListener("pointermove", () => { bar.setAttribute("fill-opacity", 0.75); showTip(tip, el, `${range}<br><b>${fmt(c)}</b> requests (${fmt((c / G.total) * 100, 2)}%)`, ((x0 + bw / 2) / W) * el.clientWidth, ((m.t + ph - h) / H) * el.clientHeight); });
+    hit.addEventListener("pointerleave", () => { bar.setAttribute("fill-opacity", 1); tip.style.opacity = 0; });
+  });
+  add(svg, "text", { x: m.l + pw, y: H - 8, "text-anchor": "end" }, "ms");
+  $("hist-desc").textContent = `Request count per ${step} ms bucket; the last bar collects the tail (≥ p99.5).`;
+}
+
+function render() {
+  timeChart($("rps"), { series: [
+    { key: "ok", label: "OK", color: "var(--s1)", area: true },
+    { key: "ko", label: "KO", color: "var(--critical)" },
+  ] });
+  timeChart($("vus"), { H: 150, series: [{ key: "vus", label: "VUs", color: "var(--s1)", area: true }] });
+  timeChart($("pct"), { fmtY: (v) => ms(v), series: [
+    { key: "p50", label: "p50", color: "var(--s1)" },
+    { key: "p95", label: "p95", color: "var(--s2)" },
+    { key: "p99", label: "p99", color: "var(--s3)" },
+  ] });
+  histogram($("hist"));
+}
+
+// ---- ranges, tables -------------------------------------------------------
+const R = D.ranges;
+const rangeItems = [
+  [`t < ${R.low} ms`, R.fast, "var(--r1)"],
+  [`${R.low} ≤ t < ${R.high} ms`, R.mid, "var(--r2)"],
+  [`t ≥ ${R.high} ms`, R.slow, "var(--r3)"],
+  ["Failed", R.ko, "var(--critical)"],
+];
+$("ranges-desc").textContent = `Share of requests per latency band (${R.high} ms is the p95 threshold).`;
+$("rangebar").innerHTML = rangeItems.filter(([, v]) => v).map(([l, v, c]) => `<div title="${l}: ${fmt(v)}" style="flex:${v};background:${c}"></div>`).join("");
+$("ranges").innerHTML = rangeItems.map(([l, v, c]) => `<div><div class="k" style="--c:${c}">${l}</div><div class="v">${fmt(v)}</div><div class="p">${fmt((v / G.total) * 100, 2)}%</div></div>`).join("");
+
+$("thresholds").innerHTML = `<thead><tr><th>Metric</th><th>Condition</th><th>Result</th></tr></thead><tbody>` +
+  D.thresholds.map((t) => `<tr><td><code>${t.metric}</code></td><td><code>${t.expr}</code></td><td class="${t.passed ? "ok" : "ko"}">${t.passed ? "✓ pass" : "✕ fail"}</td></tr>`).join("") + "</tbody>";
+
+const statRow = (name, s, cls = "") => `<tr class="${cls}"><td>${name}</td><td>${fmt(s.total)}</td><td>${fmt(s.ok)}</td><td class="${s.ko ? "ko" : ""}">${fmt(s.ko)}</td><td>${fmt((s.ko / s.total) * 100, 2)}%</td><td>${fmt(s.rps, 1)}</td>` +
+  ["min", "p50", "p75", "p95", "p99", "max", "mean", "std"].map((k) => `<td>${ms(s[k])}</td>`).join("") + "</tr>";
+$("stats").innerHTML = `<thead><tr class="group"><th></th><th colspan="5" style="text-align:center">Requests</th><th colspan="8" style="text-align:center">Response time (ms)</th></tr>` +
+  `<tr><th>Endpoint</th><th>Total</th><th>OK</th><th>KO</th><th>% KO</th><th>Req/s</th><th>Min</th><th>p50</th><th>p75</th><th>p95</th><th>p99</th><th>Max</th><th>Mean</th><th>Std dev</th></tr></thead><tbody>` +
+  D.routes.map((r) => statRow(`<code>${r.name}</code>`, r)).join("") + statRow("All requests", G, "total") + "</tbody>";
+
+$("statuses").innerHTML = `<thead><tr><th>Endpoint</th><th>Status</th><th>Count</th><th>Share</th></tr></thead><tbody>` +
+  D.statuses.map((s) => `<tr><td><code>${s.route}</code></td><td>${s.status}</td><td>${fmt(s.count)}</td><td>${fmt((s.count / G.total) * 100, 2)}%</td></tr>`).join("") + "</tbody>";
+
+$("checks").innerHTML = `<thead><tr><th>Check</th><th>Passed</th><th>Failed</th><th>Rate</th></tr></thead><tbody>` +
+  D.checks.map((c) => `<tr><td>${c.name}</td><td>${fmt(c.passes)}</td><td class="${c.fails ? "ko" : ""}">${fmt(c.fails)}</td><td class="${c.fails ? "ko" : "ok"}">${fmt((c.passes / (c.passes + c.fails)) * 100, 2)}%</td></tr>`).join("") + "</tbody>";
+
+$("tl-table").innerHTML = `<thead><tr><th>t</th><th>VUs</th><th>OK</th><th>KO</th><th>p50</th><th>p95</th><th>p99</th></tr></thead><tbody>` +
+  D.timeline.map((d) => `<tr><td>${d.t}s</td><td>${d.vus}</td><td>${fmt(d.ok)}</td><td>${fmt(d.ko)}</td><td>${ms(d.p50)}</td><td>${ms(d.p95)}</td><td>${ms(d.p99)}</td></tr>`).join("") + "</tbody>";
+
+render();
+let rt;
+addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 120); });
+</script>
+</body>
+</html>

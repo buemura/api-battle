@@ -20,7 +20,7 @@ services:
 
   api:
     # Pick the implementation with API_IMPL (e.g. API_IMPL=api-rust-axum).
-    build: ./${API_IMPL:-api-node-express}
+    build: ./${API_IMPL:-api-ruby-sinatra}
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
